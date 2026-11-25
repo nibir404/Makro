@@ -136,6 +136,11 @@ export function NodeCanvas({ svc, selected, state }: { svc: Service; selected?: 
   const defaults = React.useMemo(() => {
     const l = defaultLayout(base)
     drafts.forEach((d) => (l[d.id] = d.pos))
+    // A service with only drafts (e.g. just imported): centre the service node on them.
+    if (!base.length && drafts.length) {
+      const ys = drafts.map((d) => d.pos.y)
+      l[SVC] = { x: 140, y: (Math.min(...ys) + Math.max(...ys) + RES_H) / 2 - SVC_H / 2 }
+    }
     return l
   }, [base, drafts])
   const saved = React.useSyncExternalStore(subscribeLayout, () => readLayout(svc.id), () => null)

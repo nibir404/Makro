@@ -316,3 +316,133 @@ export function CreatePalette({
     </motion.div>
   )
 }
+
+/* ------------------------------------------------------------------ */
+/* Import a Pulumi stack (empty service canvas, 02h)                   */
+/* ------------------------------------------------------------------ */
+
+type ImportStack = { id: string; name: string; env: string; updated: string; items: (Template & { found: string })[] }
+const T = (t: Omit<Template, "lines"> & { found: string; lines?: string[] }): Template & { found: string } => ({ lines: [], ...t })
+
+export function importStacks(svc: string): ImportStack[] {
+  return [
+    {
+      id: "pricing-legacy",
+      name: `pricing/${svc}-legacy`,
+      env: "prod",
+      updated: "41d · CI",
+      items: [
+        T({ id: "imp-db", label: "PostgreSQL", sub: "", add: "database", type: "database", logo: "postgres", typeLabel: "Database", name: `${svc}-db`, detail: "RDS Postgres 14 · imported", found: "aws:rds/Instance · db.t4g.medium" }),
+        T({ id: "imp-redis", label: "Redis", sub: "", add: "database", type: "cache", logo: "pulumi", typeLabel: "Cache", name: `${svc}-cache`, detail: "ElastiCache · imported", found: "aws:elasticache/Cluster · 1 node" }),
+        T({ id: "imp-bucket", label: "S3", sub: "", add: "database", type: "bucket", logo: "pulumi", typeLabel: "Bucket", name: `makro-${svc}-exports`, detail: "S3 · imported", found: "aws:s3/Bucket · versioned" }),
+        T({ id: "imp-secret", label: "Secrets", sub: "", add: "secret", type: "secrets", logo: "vault", typeLabel: "Secrets", name: `Secrets · ${svc}`, detail: "6 keys · imported from SSM", found: "aws:ssm/Parameter × 6" }),
+      ],
+    },
+    {
+      id: "pricing-events",
+      name: "pricing/events",
+      env: "prod",
+      updated: "12d · Sam",
+      items: [
+        T({ id: "imp-topic", label: "Kafka topic", sub: "", add: "kafka", type: "kafka", logo: "kafka", typeLabel: "Kafka topic", name: "pricing.updates", detail: "6 partitions · producer", found: "kafka:index/Topic · 6 partitions" }),
+      ],
+    },
+  ]
+}
+
+export function ImportStackDialog({ svc, onClose, onImported }: { svc: string; onClose: () => void; onImported: (n: number) => void }) {
+  const stacks = React.useMemo(() => importStacks(svc), [svc])
+  const [stackId, setStackId] = React.useState(stacks[0].id)
+  const stack = stacks.find((s) => s.id === stackId) ?? stacks[0]
+  const [picked, setPicked] = React.useState<string[]>(stacks[0].items.map((i) => i.id))
+  const [busy, setBusy] = React.useState(false)
+  React.useEffect(() => {
+    const h = (e: KeyboardEvent) => e.key === "Escape" && !busy && onClose()
+    window.addEventListener("keydown", h)
+    return () => window.removeEventListener("keydown", h)
+  }, [onClose, busy])
+  const choose = (id: string) => {
+    setStackId(id)
+    setPicked((stacks.find((s) => s.id === id) ?? stacks[0]).items.map((i) => i.id))
+  }
+  const run = () => {
+    setBusy(true)
+    window.setTimeout(() => {
+      const items = stack.items.filter((i) => picked.includes(i.id))
+      items.forEach((t, i) => createDraft(svc, { ...t, lines: [`import: ${stack.name}`, `urn: ${t.found}`] }, { x: 560, y: 150 + i * 170 }))
+      onImported(items.length)
+    }, 900)
+  }
+  return (
+    <motion.div
+      data-ui
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 z-40 flex items-center justify-center bg-black/45 backdrop-blur-[2px] light:bg-black/15"
+      onPointerDown={(e) => e.target === e.currentTarget && !busy && onClose()}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 6 }}
+        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+        className="w-[560px] overflow-hidden rounded-[14px] border border-line-3 bg-surface shadow-2xl"
+      >
+        <div className="flex flex-col gap-1 border-b border-line-2 px-5 py-4">
+          <span className="flex items-center gap-2 text-[15px] font-semibold text-foreground">
+            <IntegrationLogo name="pulumi" className="size-4" /> Import a Pulumi stack
+          </span>
+          <span className="text-xs text-muted-foreground">Existing cloud resources become resources of {svc}. Nothing is changed in the cloud; the import is reviewed like any change.</span>
+        </div>
+        <div className="flex flex-col gap-1.5 px-5 pt-4">
+          <span className="text-xs text-muted-foreground">Stack</span>
+          {stacks.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => choose(s.id)}
+              className={cn("flex items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left", s.id === stackId ? "border-foreground/50 bg-surface-2" : "border-line-3 hover:border-foreground/30")}
+            >
+              <span className={cn("grid size-4 place-items-center rounded-full border", s.id === stackId ? "border-primary" : "border-line-3")}>{s.id === stackId && <span className="size-2 rounded-full bg-primary" />}</span>
+              <span className="flex-1 font-mono text-[12.5px] text-foreground">{s.name}</span>
+              <span className="text-[11.5px] text-subtle">
+                {s.env} · {s.items.length} resource{s.items.length === 1 ? "" : "s"} · {s.updated}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-col gap-1 px-5 pt-4 pb-4">
+          <span className="text-xs text-muted-foreground">Resources found · pick what belongs to {svc}</span>
+          {stack.items.map((i) => {
+            const on = picked.includes(i.id)
+            return (
+              <label key={i.id} className="flex cursor-pointer items-center gap-3 rounded-[8px] px-2 py-1.5 hover:bg-surface-2">
+                <input type="checkbox" checked={on} onChange={() => setPicked((p) => (on ? p.filter((x) => x !== i.id) : [...p, i.id]))} className="accent-[var(--color-primary)]" />
+                <IntegrationLogo name={i.logo} className="size-4" />
+                <span className="flex-1 font-mono text-[12.5px] text-foreground">{i.name}</span>
+                <span className="text-[11.5px] text-subtle">{i.found}</span>
+              </label>
+            )
+          })}
+        </div>
+        <div className="flex items-center justify-between border-t border-line-2 px-5 py-3.5">
+          <span className="text-[12px] text-subtle">{picked.length} selected · lands as drafts</span>
+          <span className="flex gap-2">
+            <button type="button" disabled={busy} onClick={onClose} className="h-8.5 rounded-[8px] px-3 text-[13px] text-muted-foreground hover:text-foreground disabled:opacity-40">
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={!picked.length || busy}
+              onClick={run}
+              className="btn-primary-gloss flex h-8.5 items-center gap-2 rounded-[8px] px-3.5 text-[13px] font-medium disabled:opacity-40"
+            >
+              {busy ? "Reading stack state…" : `Import ${picked.length}`}
+            </button>
+          </span>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}

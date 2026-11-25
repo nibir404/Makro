@@ -18,6 +18,7 @@ import { Btn, EnvChip, Eyebrow, IntegrationLogo, LogoTile, Stagger, StaggerItem,
 import { ClassicPage } from "@/components/shell/classic-page"
 import { CanvasHome } from "@/components/screens/home"
 import { CountUp } from "@/components/screens/activity/activity"
+import { startTour } from "@/components/idp/viewers"
 
 const card = "rounded-[12px] border border-line-2 bg-surface/60"
 
@@ -398,7 +399,7 @@ export function HomeStates({ state }: { state: string }) {
             <p className="text-[15px] leading-6 text-muted-foreground">You&apos;re in <span className="text-foreground">commerce</span> as a developer. Everything you request is reviewed by your team lead, then applied for you through GitOps — no kubectl needed.</p>
             <div className="flex gap-2.5 pt-2">
               <Btn variant="primary" size="lg" href={href("/services/new")}>+ Create a service</Btn>
-              <Btn variant="secondary" size="lg" onClick={() => toast("Tour starts on the next page", { description: "2 min · 5 steps" })}>Take the 2-min tour</Btn>
+              <Btn variant="secondary" size="lg" onClick={startTour}>Take the 2-min tour</Btn>
             </div>
           </div>
           <motion.div aria-hidden className="h-[280px] w-[420px] shrink-0 rounded-[10px] bg-cover bg-center" style={{ backgroundImage: "url(/textures/horizon.png)" }} animate={{ backgroundPositionX: ["0%", "100%", "0%"] }} transition={{ duration: 40, repeat: Infinity }} />

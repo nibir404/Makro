@@ -3,11 +3,13 @@
 import { CanvasShell } from "./canvas-shell"
 import { ClassicShell } from "./classic-shell"
 import { CommandMenuProvider } from "./overlays"
+import { TourHost } from "@/components/idp/viewers"
 
 export function AppShell({ mode, children }: { mode: "canvas" | "classic"; children: React.ReactNode }) {
   return (
     <CommandMenuProvider>
       {mode === "canvas" ? <CanvasShell>{children}</CanvasShell> : <ClassicShell>{children}</ClassicShell>}
+      <TourHost />
     </CommandMenuProvider>
   )
 }

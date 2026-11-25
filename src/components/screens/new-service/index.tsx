@@ -1,6 +1,7 @@
 "use client"
 
 import { PixelGrid, WorkingPill, WorkingText } from "@/components/idp/working"
+import { LogViewer, type LogLine } from "@/components/idp/viewers"
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "motion/react"
@@ -376,6 +377,34 @@ function SelectField({ label, value, onChange, options }: { label: string; value
 /* ================================================================== */
 /* 07c / 07d · provisioning + failed/retry                             */
 /* ================================================================== */
+function failedBuildLog(name: string): LogLine[] {
+  const L = (t: string, text: string, level?: LogLine["level"]): LogLine => ({ t, text, level })
+  return [
+    L("00:00", "Running with gitlab-runner 17.4.0 on makro-runner-07", "step"),
+    L("00:00", `Preparing environment for ${name} · job #4471`),
+    L("00:02", "Fetching changes with git depth set to 20…"),
+    L("00:03", "Checking out 9f2c1ab0 as detached HEAD (ref is main)"),
+    L("00:04", "$ docker buildx build --platform linux/amd64 .", "step"),
+    L("00:05", "#1 [internal] load build definition from Dockerfile"),
+    L("00:05", "#2 [internal] load metadata for golang:1.23-alpine"),
+    L("00:07", "#5 [build 1/5] FROM golang:1.23-alpine"),
+    L("00:08", "#6 [build 2/5] COPY go.mod go.sum ./"),
+    L("00:08", "#7 [build 3/5] go mod download", "step"),
+    L("00:09", "go: downloading github.com/makro/platform-go v2.8.0"),
+    L("00:10", "go: downloading github.com/jackc/pgx/v5 v5.6.0"),
+    L("00:11", "go: downloading github.com/makro/payments-sdk v1.4.0"),
+    L("00:12", "go: github.com/makro/payments-sdk@v1.4.0: verifying module: checksum mismatch", "warn"),
+    L("00:12", "        downloaded: h1:Qm9wX…3kA=", "warn"),
+    L("00:12", "        go.sum:     h1:7aZ2c…9fQ=", "warn"),
+    L("00:13", "SECURITY ERROR: this download does NOT match an earlier download recorded in go.sum.", "error"),
+    L("00:13", '#7 ERROR: process "go mod download" did not complete successfully: exit code: 1', "error"),
+    L("00:13", "ERROR: failed to solve: exit code: 1", "error"),
+    L("00:14", "Cleaning up project directory and file based variables"),
+    L("00:14", "ERROR: Job failed: exit code 1", "error"),
+    L("00:14", "Hint: payments-sdk v1.4.0 was re-tagged upstream. Run `go get github.com/makro/payments-sdk@v1.4.1` and commit go.sum, then retry.", "warn"),
+  ]
+}
+
 const FAIL_AT = 3 // "First build · dev"
 
 function Provision({ name, initialFail }: { name: string; initialFail: boolean }) {
@@ -385,6 +414,7 @@ function Provision({ name, initialFail }: { name: string; initialFail: boolean }
   const [failed, setFailed] = React.useState(initialFail)
   const [elapsed, setElapsed] = React.useState(0)
   const [logN, setLogN] = React.useState(2)
+  const [logOpen, setLogOpen] = React.useState(false)
   const total = provisionSteps.length
   const done = at >= total
 
@@ -515,9 +545,19 @@ function Provision({ name, initialFail }: { name: string; initialFail: boolean }
       <div className="flex flex-col gap-3 border-t border-line px-5 py-4">
         {failed ? (
           <div className="flex justify-end gap-2.5">
-            <Btn variant="secondary" onClick={() => toast("Opening job #4471 log…", { description: "gitlab.makro/commerce/payment-gateway/-/jobs/4471" })}>
+            <Btn variant="secondary" onClick={() => setLogOpen(true)}>
               View full log
             </Btn>
+            <LogViewer
+              open={logOpen}
+              onClose={() => setLogOpen(false)}
+              title={`${name} · first build`}
+              sub={`gitlab.makro/commerce/${name}/-/jobs/4471 · step ${FAIL_AT + 1} of ${total}`}
+              lines={failedBuildLog(name)}
+              status={{ tone: "fail", label: "Failed · exit code 1" }}
+              fileName={`${name}-job-4471.log`}
+              streaming
+            />
             <Btn variant="primary" onClick={retry}>
               Retry from step {FAIL_AT + 1}
             </Btn>

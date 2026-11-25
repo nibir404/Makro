@@ -14,6 +14,7 @@ import {
   activityKpis, auditLog, byModule, changesPerDay, classicFeed, eventDetail, eventsPerHour, failureHour, mostActive, needsALook, type AuditIcon,
 } from "@/lib/data-ext/inbox-activity"
 import { Btn, Stagger, StaggerItem, ease } from "@/components/idp/kit"
+import { FilterMenu } from "@/components/idp/viewers"
 import { ClassicPage } from "@/components/shell/classic-page"
 
 export function CountUp({ to, className }: { to: number; className?: string }) {
@@ -175,6 +176,15 @@ export function ActivityOverview() {
   )
 }
 
+/* Filter helpers: count each value, keep the order of first appearance. */
+const STATUS_OF: Record<string, string> = { fail: "Failed", rejected: "Rejected", approved: "Approved", rollback: "Rolled back", deploy: "Deployed", secret: "Rotated", network: "Access change" }
+function tally<T>(rows: readonly T[], key: (r: T) => string) {
+  const m = new Map<string, number>()
+  rows.forEach((r) => m.set(key(r), (m.get(key(r)) ?? 0) + 1))
+  return [...m].map(([value, count]) => ({ value, count }))
+}
+const pass = (sel: string[], v: string) => !sel.length || sel.includes(v)
+
 /* ================= 08b Audit log / 08c detail / 08d no results ================= */
 export function AuditLog({ selected }: { selected?: string }) {
   const href = useHref()
@@ -182,7 +192,16 @@ export function AuditLog({ selected }: { selected?: string }) {
   const params = useSearchParams()
   const [q, setQ] = React.useState(params.get("q") ?? "")
   const [envFilter, setEnvFilter] = React.useState(true)
-  const rows = auditLog.filter((e) => !q || `${e.title} ${e.resource} ${e.actor}`.toLowerCase().includes(q.toLowerCase()))
+  const [mods, setMods] = React.useState<string[]>([])
+  const [actors, setActors] = React.useState<string[]>([])
+  const [statuses, setStatuses] = React.useState<string[]>([])
+  const rows = auditLog.filter(
+    (e) =>
+      (!q || `${e.title} ${e.resource} ${e.actor}`.toLowerCase().includes(q.toLowerCase())) &&
+      pass(mods, e.module) &&
+      pass(actors, e.actor) &&
+      pass(statuses, STATUS_OF[e.icon] ?? e.icon),
+  )
   const days = ["Today", "Yesterday"] as const
   const open = !!selected
   return (
@@ -210,9 +229,9 @@ export function AuditLog({ selected }: { selected?: string }) {
             </motion.button>
           )}
         </AnimatePresence>
-        {["Module", "Actor", "Status"].map((f) => (
-          <button key={f} onClick={() => toast(`Filter by ${f.toLowerCase()}`)} className="h-7.5 rounded-[6px] border border-dashed border-line-3 px-2.5 text-[12px] text-subtle hover:text-foreground">+ {f}</button>
-        ))}
+        <FilterMenu label="Module" options={tally(auditLog, (e) => e.module)} selected={mods} onChange={setMods} />
+        <FilterMenu label="Actor" options={tally(auditLog, (e) => e.actor)} selected={actors} onChange={setActors} />
+        <FilterMenu label="Status" options={tally(auditLog, (e) => STATUS_OF[e.icon] ?? e.icon)} selected={statuses} onChange={setStatuses} />
       </div>
       {rows.length === 0 ? (
         <div className={cn(card, "overflow-hidden")}>
@@ -347,7 +366,9 @@ export function ClassicActivity() {
   const href = useHref()
   const [q, setQ] = React.useState("")
   const max = Math.max(...eventsPerHour)
-  const rows = classicFeed.filter((r) => !q || `${r.actor} ${r.text}`.toLowerCase().includes(q.toLowerCase()))
+  const [types, setTypes] = React.useState<string[]>([])
+  const [who, setWho] = React.useState<string[]>([])
+  const rows = classicFeed.filter((r) => (!q || `${r.actor} ${r.text}`.toLowerCase().includes(q.toLowerCase())) && pass(types, STATUS_OF[r.icon] ?? r.icon) && pass(who, r.actor))
   return (
     <ClassicPage crumbs={<span className="flex items-center gap-2 text-[14px] font-medium text-foreground"><ActivityIcon className="size-4" /> Activity</span>}>
       <div className="flex items-start justify-between">
@@ -373,7 +394,8 @@ export function ClassicActivity() {
           <Search className="size-3.5 text-subtle" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search events, people, resources…" className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-subtle" />
         </label>
-        {["Type", "Actor"].map((f) => <button key={f} onClick={() => toast(`Filter by ${f.toLowerCase()}`)} className="h-9 rounded-[8px] border border-dashed border-line-3 px-3 text-[12.5px] text-muted-foreground hover:text-foreground">{f} ▾</button>)}
+        <FilterMenu size="md" label="Type" options={tally(classicFeed, (r) => STATUS_OF[r.icon] ?? r.icon)} selected={types} onChange={setTypes} />
+        <FilterMenu size="md" label="Actor" options={tally(classicFeed, (r) => r.actor)} selected={who} onChange={setWho} />
       </div>
       <div className="flex flex-col">
         <span className="pb-2 text-[11px] tracking-[0.06em] text-subtle uppercase">Today</span>

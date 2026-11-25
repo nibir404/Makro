@@ -105,13 +105,19 @@ export function ClassicSidebar() {
           <PanelLeft className="size-[15px]" />
         </button>
       </div>
-      {!collapsed && <SearchTrigger variant="classic" />}
+      {!collapsed && (
+        <div data-tour="search">
+          <SearchTrigger variant="classic" />
+        </div>
+      )}
       <nav className="flex flex-col gap-0.5">
         {MAIN.map((i) => (
-          <SideLink key={i.path} item={i} active={section === i.match} />
+          <div key={i.path} data-tour={i.match}>
+            <SideLink item={i} active={section === i.match} />
+          </div>
         ))}
       </nav>
-      <nav className="flex flex-col gap-0.5">
+      <nav data-tour="platform" className="flex flex-col gap-0.5">
         {!collapsed && <div className="px-2.5 pb-1.5 text-[11px] tracking-[0.08em] text-[#646464]">PLATFORM</div>}
         {PLATFORM.map((i) => (
           <SideLink key={i.path} item={i} active={section === i.match} />
@@ -193,7 +199,9 @@ export function ClassicTopbar({ crumbs }: { crumbs?: React.ReactNode }) {
         )}
       </div>
       <div className="flex items-center gap-2">
-        <ModeToggle variant="classic" />
+        <div data-tour="mode" className="flex">
+          <ModeToggle variant="classic" />
+        </div>
         <NotificationsButton />
       </div>
     </header>

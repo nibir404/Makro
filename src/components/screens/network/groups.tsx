@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { AnimatePresence, motion } from "motion/react"
+import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Check, MoreHorizontal, Network, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -13,7 +14,8 @@ type Person = (typeof groupPeople)[number] & { added?: boolean }
 
 /** 13c — Groups & members. */
 export function GroupsScreen() {
-  const [sel, setSel] = React.useState(accessGroups[0].id)
+  const wanted = useSearchParams().get("group")
+  const [sel, setSel] = React.useState(accessGroups.some((g) => g.id === wanted) ? (wanted as string) : accessGroups[0].id)
   const [filter, setFilter] = React.useState("")
   const [q, setQ] = React.useState("jor")
   const [tab, setTab] = React.useState<"members" | "resources">("members")

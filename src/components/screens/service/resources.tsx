@@ -39,6 +39,7 @@ import {
 import { Btn, IntegrationLogo, Spark, StatusDot, StatusText, ease, useHotkey } from "@/components/idp/kit"
 import { stagedStore, useStaged } from "./store"
 import { NodeCanvas } from "./canvas"
+import { ImportStackDialog, useDrafts } from "./create"
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -103,6 +104,7 @@ export function ServiceResources({ service, resource }: { service: string; resou
   const selected = resource ? svc.resources.find((r) => r.id === decodeURIComponent(resource)) : undefined
   const state = (sp?.get("state") as RState) || undefined
   const nav = useNav(service)
+  const drafts = useDrafts(service)
   useHotkey("escape", () => selected && nav.close(), { enabled: !!selected })
 
   if (mode === "classic")
@@ -114,7 +116,7 @@ export function ServiceResources({ service, resource }: { service: string; resou
     )
 
   const view = sp?.get("view") === "list" ? "list" : "canvas"
-  if (!svc.resources.length) return <EmptyCanvas svc={svc} />
+  if (!svc.resources.length && !drafts.length) return <EmptyCanvas svc={svc} />
   return (
     <div className="relative flex min-h-0 flex-1">
       <div className="relative min-w-0 flex-1">
@@ -243,6 +245,7 @@ export function StagedBar({ service, classic }: { service: string; classic?: boo
 
 function EmptyCanvas({ svc }: { svc: Service }) {
   const href = useHref()
+  const [importing, setImporting] = React.useState(false)
   return (
     <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
       <div
@@ -280,11 +283,23 @@ function EmptyCanvas({ svc }: { svc: Service }) {
           <Btn variant="primary" href={href(`/services/${svc.id}/add`)}>
             Add resource
           </Btn>
-          <Btn variant="ghost" onClick={() => toast("Import stack", { description: "Pick a Pulumi stack to import — coming soon." })}>
+          <Btn variant="ghost" onClick={() => setImporting(true)}>
             Import stack
           </Btn>
         </div>
       </motion.div>
+      <AnimatePresence>
+        {importing && (
+          <ImportStackDialog
+            svc={svc.id}
+            onClose={() => setImporting(false)}
+            onImported={(n) => {
+              setImporting(false)
+              toast.success(`Imported ${n} resource${n === 1 ? "" : "s"} as drafts`, { description: "Review the change set to attach them · ⌘↵" })
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -1011,6 +1026,7 @@ function RotatePanel({ svc, r }: { svc: Service; r: Resource }) {
 }
 
 function SecretsPanel() {
+  const href = useHref()
   const [q, setQ] = React.useState("")
   const [shown, setShown] = React.useState<string | null>(null)
   const keys = secretKeys.filter((k) => k.key.toLowerCase().includes(q.toLowerCase()))
@@ -1050,9 +1066,9 @@ function SecretsPanel() {
           <span className="flex items-center gap-2">
             <Clock className="size-3.5 text-warning" /> App access SecretID expires in 3 days
           </span>
-          <button className="text-primary hover:underline" onClick={() => toast.success("SecretID rotation started", { description: "New SecretID issued · old valid 24h" })}>
+          <Link href={href("/secrets/order-service?edit=none&rotate=secretid")} className="text-primary hover:underline">
             Rotate
-          </button>
+          </Link>
         </span>
         <span className="text-xs text-muted-foreground">Values are masked · reveal is logged to the audit trail.</span>
       </Footer>
@@ -1061,6 +1077,7 @@ function SecretsPanel() {
 }
 
 function NetworkPanel() {
+  const href = useHref()
   const [confirm, setConfirm] = React.useState(false)
   return (
     <>
@@ -1083,9 +1100,9 @@ function NetworkPanel() {
               {m}
             </span>
           ))}
-          <button className="ml-1 text-xs text-primary hover:underline" onClick={() => toast("Manage members")}>
+          <Link href={href("/network/groups?group=commerce-order")} className="ml-1 text-xs text-primary hover:underline">
             Manage
-          </button>
+          </Link>
         </div>
         <AnimatePresence>
           {confirm && (

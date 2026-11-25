@@ -160,26 +160,36 @@ export function CanvasTopbar() {
         )}
       </div>
       <nav className="flex items-center gap-1.5">
-        <ModeToggle variant="canvas" />
-        <TopNavItem href={href("/")} active={section === "" || section === "services"} icon={Boxes}>
-          Services
-        </TopNavItem>
-        <TopNavItem href={href("/inbox")} active={section === "inbox"} icon={Inbox}>
-          Inbox <span className="text-foreground">{inbox.length}</span>
-        </TopNavItem>
+        <div data-tour="mode" className="flex">
+          <ModeToggle variant="canvas" />
+        </div>
+        <div data-tour="services" className="flex">
+          <TopNavItem href={href("/")} active={section === "" || section === "services"} icon={Boxes}>
+            Services
+          </TopNavItem>
+        </div>
+        <div data-tour="inbox" className="flex">
+          <TopNavItem href={href("/inbox")} active={section === "inbox"} icon={Inbox}>
+            Inbox <span className="text-foreground">{inbox.length}</span>
+          </TopNavItem>
+        </div>
         <TopNavItem href={href("/activity")} active={section === "activity"} icon={Activity}>
           Activity
         </TopNavItem>
-        <PlatformMenu
-          trigger={
-            <button className="outline-none">
-              <TopNavItem asButton active={platform} icon={Layers}>
-                Platform <ChevronDown className="size-3" />
-              </TopNavItem>
-            </button>
-          }
-        />
-        <SearchTrigger variant="canvas" />
+        <div data-tour="platform" className="flex">
+          <PlatformMenu
+            trigger={
+              <button className="outline-none">
+                <TopNavItem asButton active={platform} icon={Layers}>
+                  Platform <ChevronDown className="size-3" />
+                </TopNavItem>
+              </button>
+            }
+          />
+        </div>
+        <div data-tour="search" className="flex">
+          <SearchTrigger variant="canvas" />
+        </div>
         <AvatarMenu
           trigger={
             <button aria-label="Account" className="rounded-full transition-transform hover:scale-105 active:scale-95">
