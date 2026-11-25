@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { ArrowUpRight, Check, Database, History, KeyRound, Loader, Plus, RotateCw, TriangleAlert, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useHref, useMode } from "@/lib/mode"
+import { PostgresCanvas, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
 import { Btn, EnvChip, GlossCard, IntegrationLogo, ease, useHotkey } from "@/components/idp/kit"
 import { PW_MAX, c4eDbs, pgBindings, pgDbUsers, pgDbs, pgRotations, type PgDb } from "@/lib/data-ext/kafka-postgres"
 import {
@@ -49,6 +50,7 @@ export function PgAllDatabases() {
   const href = useHref()
   const router = useRouter()
   const [view, setView] = useQueryState("view")
+  const [, setMv] = useModuleView("postgres")
   const [newQ, setNew] = useQueryState("new")
   const [all, setAll] = React.useState(false)
   const [q, setQ] = React.useState("")
@@ -69,6 +71,7 @@ export function PgAllDatabases() {
         sub="19 databases · 46 users · 2 need attention"
         right={
           <>
+            <ViewSwitch view="list" onChange={setMv} module="postgres" />
             <Segmented
               id="pg"
               active={tab}
@@ -329,6 +332,10 @@ function RequestUserDialog({ open, onClose }: { open: boolean; onClose: () => vo
 export function PgOverview() {
   const mode = useMode()
   const [tab] = useQueryState("tab")
+  const [sub] = useQueryState("view")
+  const [mv, setMv] = useModuleView("postgres")
+  // ?view=rotations is the Rotations tab of the list, so it always shows the list.
+  if (mode === "canvas" && !tab && mv === "canvas" && sub !== "rotations") return <PostgresCanvas onView={setMv} />
   if (mode === "canvas" && !tab) return <PgAllDatabases />
   return <PgClassicOverview />
 }

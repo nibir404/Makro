@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { AnimatePresence, motion } from "motion/react"
 import { Plus, Users, Radio } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { KafkaCanvas, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
 import { useHref } from "@/lib/mode"
 import { Btn, StatusDot, useHotkey } from "@/components/idp/kit"
 import { TOPIC_HEALTH, clusterTopics, topics, type Topic } from "@/lib/data-ext/kafka-postgres"
@@ -47,7 +48,9 @@ const fmtRate = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k/s` : `${n
 
 export function KafkaCatalog() {
   const sp = useSearchParams()
+  const [mv, setMv] = useModuleView("kafka")
   if (sp.get("view") === "cluster") return <KafkaClusterView />
+  if (mv === "canvas") return <KafkaCanvas onView={setMv} />
   return <KafkaTopicCatalog />
 }
 
@@ -85,6 +88,7 @@ function KafkaTopicCatalog() {
         sub="248 topics · 3 clusters · 64 / 300 partitions on prod-core"
         right={
           <>
+            <ViewSwitch view="list" module="kafka" hrefs={{ canvas: href("/kafka?view=canvas"), list: href("/kafka?view=list") }} />
             <KafkaTabs active="topics" />
             <Btn variant="primary" size="sm" className="h-8.5" href={href("/services/order-service/add?type=kafka")}>
               New topic
@@ -207,6 +211,7 @@ function KafkaClusterView() {
           <p className="text-[13px] text-subtle">48 topics on makro-prod-core · 18.2k msg/s</p>
         </div>
         <div className="flex gap-2">
+          <ViewSwitch view="list" module="kafka" hrefs={{ canvas: href("/kafka?view=canvas"), list: href("/kafka?view=list") }} className="h-9" />
           <Btn size="md" href={href("/kafka/users")}>
             <Users /> Users & ACLs
           </Btn>

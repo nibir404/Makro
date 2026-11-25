@@ -30,6 +30,7 @@ Use the Canvas/Classic toggle to switch on the same screen. Change the theme fro
 | Secrets | `/secrets`, `/secrets/order-service`, `/versions?key=DATABASE_URL`, `/compare`, `/upload`, `/access-log`, `/tree`, `/tokens` | 14a–f · 16f |
 | Vault actions | `/secrets/order-service?rotate=secretid` (rotate SecretID, shown once), `?branch=new` (create branch), `?inherit=1` (manage inheritance); delete a key from its row (trash icon); delete a branch from its tab header | no Paper frame · ported from old IDP Kura 05i/05k/05p/05q/05t/05u |
 | Kafka | `/kafka` (`?view=cluster`), `/kafka/topics/orders.created.v1` (`?tab=…`), `/kafka/users` (`?rotate=…`, `?new=1`) | 16a · 16b · C4d |
+| Module canvases | `?view=canvas` on `/postgres`, `/infra`, `/projects`, `/secrets`, `/kafka`; `?view=list` forces the list. Network: `/network/map`. The last choice per module is remembered. | no Paper frame for the all-module graphs |
 | Kafka ACLs | `/kafka/acls` (`?apply=1` bulk confirm, `?state=partial` partial failure, `?replace=ka-0001`) | no Paper frame · ported from old IDP 06h–06n |
 | Postgres | `/postgres`, `/postgres/databases`, `/postgres/pg-prod-orders` (`?rotate=order_svc_rw`, `?rollback=1`) | 16c · C4e |
 

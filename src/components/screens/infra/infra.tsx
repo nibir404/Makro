@@ -10,6 +10,7 @@ import { ReactFlow, Background, Handle, Position, type Edge, type Node, type Nod
 import "@xyflow/react/dist/style.css"
 import { cn } from "@/lib/utils"
 import { useHref, useMode } from "@/lib/mode"
+import { InfraCanvas, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
 import { Btn, EnvChip, FadeIn, IntegrationLogo, Stagger, StaggerItem, StatusDot, StatusPill, ease, useHotkey } from "@/components/idp/kit"
 import {
   getStack,
@@ -49,7 +50,9 @@ function useQ() {
 /* ---------------- 12a stacks / 16g requests ---------------- */
 export function InfraHome() {
   const mode = useMode()
+  const [mv, setMv] = useModuleView("infra")
   if (mode === "classic") return <ClassicInfra />
+  if (mv === "canvas") return <InfraCanvas onView={setMv} />
   return <CanvasInfra />
 }
 function CanvasInfra() {
@@ -57,6 +60,7 @@ function CanvasInfra() {
   const router = useRouter()
   const [sp, setQ] = useQ()
   const tab = sp.get("tab") === "requests" ? "requests" : "stacks"
+  const [, setMv] = useModuleView("infra")
   useHotkey("n", () => router.push(href("/infra/new")))
   return (
     <Screen crumbs={<Crumbs items={[{ label: "Infrastructure" }]} />}>
@@ -69,6 +73,7 @@ function CanvasInfra() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <ViewSwitch view="list" onChange={setMv} module="infra" />
           <Seg
             id="infratab"
             value={tab}

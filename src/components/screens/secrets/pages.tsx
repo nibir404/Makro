@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { ArrowRight, Check, FileUp, KeyRound, Loader2, Plus, Search, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useHref, useMode } from "@/lib/mode"
+import { SecretsCanvas, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
 import { secretProjects } from "@/lib/data"
 import { classicSecrets, compareRows, inheritedKeys, qaCurrent, readsPerDay, sampleEnv, type CompareCell } from "@/lib/data-ext/network-secrets"
 import { Btn, Stagger, StaggerItem, StatusDot, ease } from "@/components/idp/kit"
@@ -19,10 +20,12 @@ import { logEntry, nowHHMM, useAccessLog } from "./store"
 
 export function SecretsIndex() {
   const mode = useMode()
-  return mode === "classic" ? <ClassicSecrets /> : <CanvasSecretsList />
+  const [mv, setMv] = useModuleView("secrets")
+  if (mode === "classic") return <ClassicSecrets />
+  return mv === "canvas" ? <SecretsCanvas onView={setMv} /> : <CanvasSecretsList onView={setMv} />
 }
 
-function CanvasSecretsList() {
+function CanvasSecretsList({ onView }: { onView: (v: "list" | "canvas") => void }) {
   const href = useHref()
   const [q, setQ] = React.useState("")
   const list = secretProjects.filter((p) => p.name.includes(q.toLowerCase()))
@@ -37,6 +40,7 @@ function CanvasSecretsList() {
           </div>
         </div>
         <div className="flex gap-2">
+          <ViewSwitch view="list" onChange={onView} module="secrets" className="h-9" />
           <Btn variant="secondary" href={href("/secrets/order-service/compare")}>
             Compare envs
           </Btn>

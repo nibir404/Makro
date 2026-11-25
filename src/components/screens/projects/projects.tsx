@@ -11,6 +11,7 @@ import "@xyflow/react/dist/style.css"
 import { cn } from "@/lib/utils"
 import type { Logo } from "@/lib/data"
 import { useHref, useMode } from "@/lib/mode"
+import { ProjectsCanvas, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
 import { Btn, FadeIn, IntegrationLogo, Stagger, StaggerItem, StatusDot, ease, useHotkey } from "@/components/idp/kit"
 import { getProject, projectCards, projectServices, switcherItems } from "@/lib/data-ext/infra-projects"
 import { Card, CountUp, Crumbs, Field, Modal, Screen, Seg, TH, inputCls } from "../infra/ui"
@@ -154,7 +155,9 @@ export function ProjectsList() {
   const [sw, setSw] = React.useState(sp.get("switcher") === "1")
   useHotkey("n", () => router.push(href("/projects/new")))
   const list = projectCards.filter((p) => p.name.includes(q.toLowerCase()))
+  const [mv, setMv] = useModuleView("projects")
   if (mode === "classic") return <ClassicProjects sw={sw} setSw={setSw} />
+  if (mv === "canvas") return <ProjectsCanvas onView={setMv} />
   return (
     <Screen crumbs={<Crumbs items={[{ label: "Projects" }]} />}>
       <ProjectSwitcher open={sw} onClose={() => setSw(false)} />
@@ -164,6 +167,7 @@ export function ProjectsList() {
           <p className="text-[14px] text-muted-foreground">4 projects · 31 services · you&apos;re in 3</p>
         </div>
         <div className="flex items-center gap-2">
+          <ViewSwitch view="list" onChange={setMv} module="projects" />
           <Btn variant="ghost" size="md" onClick={() => setSw(true)}>Switch</Btn>
           <div className="flex h-9 w-60 items-center gap-2 rounded-[9px] border border-line-3 bg-page px-3">
             <Search className="size-3.5 text-subtle" />

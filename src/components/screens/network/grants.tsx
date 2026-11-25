@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react"
 import { toast } from "sonner"
 import { Loader2, MoreHorizontal, Network, Plus, Search, Waypoints } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ViewSwitch } from "@/components/screens/platform-canvas"
 import { useHref, useMode } from "@/lib/mode"
 import { grants as seed, myAccess, reachTargets, type Grant, type GrantState } from "@/lib/data-ext/network-secrets"
 import { Btn, IntegrationLogo, StatusDot, Stagger, StaggerItem, ease, useHotkey } from "@/components/idp/kit"
@@ -54,6 +55,7 @@ export function NetworkHeader({ count, onRequest }: { count: number; onRequest: 
         </div>
       </div>
       <div className="flex items-center gap-2.5">
+        <ViewSwitch view="list" module="network" hrefs={{ canvas: href("/network/map"), list: href("/network") }} />
         <Segmented
           id="net-top"
           value={tab}
