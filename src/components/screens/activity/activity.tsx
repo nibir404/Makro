@@ -69,7 +69,7 @@ export function ActivityOverview() {
   const href = useHref()
   const max = 170
   const tone: Record<string, string> = { success: "text-success", destructive: "text-destructive", subtle: "text-subtle" }
-  let acc = 0
+  const offsets = byModule.map((_, i) => byModule.slice(0, i).reduce((a, b) => a + b.pct, 0))
   return (
     <div className="flex flex-col gap-4 px-10 pt-8 pb-12">
       <div className="flex items-start justify-between">
@@ -120,8 +120,7 @@ export function ActivityOverview() {
             <svg viewBox="0 0 120 120" className="size-[120px] -rotate-90">
               {byModule.map((m, i) => {
                 const c = 2 * Math.PI * 48
-                const off = acc
-                acc += m.pct
+                const off = offsets[i]
                 const op = [1, 0.55, 0.35, 0.22, 0.14][i]
                 return (
                   <motion.circle key={m.label} cx="60" cy="60" r="48" fill="none" strokeWidth="14" className="stroke-foreground" style={{ opacity: op }}

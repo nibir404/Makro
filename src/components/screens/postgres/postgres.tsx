@@ -347,6 +347,7 @@ function PgClassicOverview() {
           <p className="text-[13px] text-subtle">20 databases · 64 users · 2 rotations due this week</p>
         </div>
         <div className="flex gap-2">
+          <Btn size="md" href={href("/postgres/databases")}>All databases</Btn>
           <Btn size="md" href={href("/secrets")}>
             <KeyRound /> Credentials
           </Btn>
@@ -508,7 +509,8 @@ export function PgDbDetail() {
                 setChecking(true)
                 window.setTimeout(() => {
                   setChecking(false)
-                  db.health === "failing" ? toast.error("Still failing", { description: "connection refused from 10.4.2.11:5432" }) : toast.success("Health check passed")
+                  if (db.health === "failing") toast.error("Still failing", { description: "connection refused from 10.4.2.11:5432" })
+                  else toast.success("Health check passed")
                 }, 1200)
               }}
             >
@@ -599,7 +601,11 @@ export function PgDbDetail() {
 
 function RotateDialog({ user, db, onClose, onDone }: { user: string | null; db: PgDb; onClose: () => void; onDone: (u: string) => void }) {
   const [step, setStep] = React.useState(0)
-  React.useEffect(() => setStep(0), [user])
+  const [prevUser, setPrevUser] = React.useState(user)
+  if (user !== prevUser) {
+    setPrevUser(user)
+    setStep(0)
+  }
   const go = () => {
     if (!user) return
     setStep(1)

@@ -131,3 +131,34 @@ export const pgRotations = [
   { when: "3d ago", db: "pg-qa-pricing", user: "pricing_rw", by: "system", ok: false },
   { when: "6d ago", db: "pg-prod-loyalty", user: "loyalty_rw", by: "system", ok: true },
 ]
+
+/* ---------- Kafka ACLs (platform list · replace · bulk apply) ---------- */
+export type AclResourceType = "TOPIC" | "GROUP" | "CLUSTER"
+export type AclOp = "READ" | "WRITE" | "DESCRIBE" | "CREATE" | "ALTER" | "DELETE"
+export type KAcl = {
+  id: string
+  type: AclResourceType
+  resource: string
+  op: AclOp
+  principal: string
+  cluster: string
+  env: Env
+  status: Lifecycle
+  by: string
+  ago: string
+  error?: string
+  /** Demo only: this row fails when bulk-applied (the partial-failure frame). */
+  failsOnApply?: boolean
+}
+export const kAcls: KAcl[] = [
+  { id: "ka-0001", type: "TOPIC", resource: "orders.created.v1", op: "WRITE", principal: "svc-order-service", cluster: "makro-prod-core", env: "prod", status: "live", by: "siriporn.k", ago: "just now" },
+  { id: "ka-0002", type: "TOPIC", resource: "orders.status-changed.v1", op: "WRITE", principal: "svc-order-service", cluster: "makro-prod-core", env: "prod", status: "approved", by: "siriporn.k", ago: "just now" },
+  { id: "ka-0003", type: "TOPIC", resource: "orders.", op: "DESCRIBE", principal: "svc-order-service", cluster: "makro-prod-core", env: "prod", status: "approved", by: "siriporn.k", ago: "2h ago" },
+  { id: "ka-0004", type: "TOPIC", resource: "inventory.stock-level.v2", op: "WRITE", principal: "svc-inventory-sync", cluster: "makro-prod-core", env: "prod", status: "failed", by: "siriporn.k", ago: "5h ago", error: "CreateAcls failed: principal not found in broker", failsOnApply: true },
+  { id: "ka-0005", type: "TOPIC", resource: "orders.created.v1", op: "READ", principal: "svc-inventory-sync", cluster: "makro-prod-core", env: "prod", status: "live", by: "siriporn.k", ago: "8h ago" },
+  { id: "ka-0006", type: "GROUP", resource: "analytics-etl", op: "READ", principal: "svc-analytics-etl", cluster: "makro-prod-core", env: "prod", status: "approved", by: "niran.p", ago: "1d ago" },
+  { id: "ka-0007", type: "TOPIC", resource: "payments.captured.v2", op: "READ", principal: "svc-fulfil-v2", cluster: "makro-qa", env: "qa", status: "approved", by: "niran.p", ago: "1d ago" },
+  { id: "ka-0008", type: "TOPIC", resource: "loyalty.points.redeemed.v1", op: "WRITE", principal: "svc-loyalty-gw", cluster: "makro-qa", env: "qa", status: "approved", by: "anucha.w", ago: "2d ago" },
+  { id: "ka-0009", type: "CLUSTER", resource: "kafka-cluster", op: "DESCRIBE", principal: "svc-analytics-etl", cluster: "makro-dev", env: "dev", status: "approved", by: "anucha.w", ago: "3d ago" },
+  { id: "ka-0010", type: "GROUP", resource: "fulfil-v2", op: "READ", principal: "svc-fulfil-v2", cluster: "makro-qa", env: "qa", status: "approved", by: "niran.p", ago: "3d ago" },
+]

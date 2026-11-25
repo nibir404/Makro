@@ -15,7 +15,7 @@ import {
   Copy,
   List as ListIcon,
   Loader,
-  Minus,
+
   MoreHorizontal,
   Plus,
   Search,
@@ -38,18 +38,19 @@ import {
 } from "@/lib/data-ext/service"
 import { Btn, IntegrationLogo, Spark, StatusDot, StatusText, ease, useHotkey } from "@/components/idp/kit"
 import { stagedStore, useStaged } from "./store"
+import { NodeCanvas } from "./canvas"
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-type RState = "applying" | "failed" | undefined
+export type RState = "applying" | "failed" | undefined
 
-function nodeTitle(r: Resource) {
+export function nodeTitle(r: Resource) {
   return r.type === "network" ? `Access · ${r.name.split(":")[0]}` : r.name
 }
 
-function look(r: Resource, state: RState) {
+export function look(r: Resource, state: RState) {
   if (state === "applying")
     return { tone: "busy" as Health, Icon: Loader, spin: true, text: "Applying · partitions 7/12", cls: "text-info", dots: ["ok", "ok"] as Health[] }
   if (state === "failed")
@@ -67,7 +68,7 @@ function look(r: Resource, state: RState) {
 }
 
 /** Navigation helpers that keep ?env and ?view. */
-function useNav(service: string) {
+export function useNav(service: string) {
   const href = useHref()
   const router = useRouter()
   const sp = useSearchParams()
@@ -132,7 +133,7 @@ export function ServiceResources({ service, resource }: { service: string; resou
 /* Canvas chrome                                                       */
 /* ------------------------------------------------------------------ */
 
-function ViewToggle({ service, view }: { service: string; view: "canvas" | "list" }) {
+export function ViewToggle({ service, view }: { service: string; view: "canvas" | "list" }) {
   void service
   const pathname = usePathname() ?? ""
   const sp = useSearchParams()
@@ -172,7 +173,7 @@ function ViewToggle({ service, view }: { service: string; view: "canvas" | "list
   )
 }
 
-function StagedBar({ service, classic }: { service: string; classic?: boolean }) {
+export function StagedBar({ service, classic }: { service: string; classic?: boolean }) {
   const href = useHref()
   const staged = useStaged()
   const discard = () => {
@@ -233,225 +234,6 @@ function StagedBar({ service, classic }: { service: string; classic?: boolean })
         </motion.div>
       )}
     </AnimatePresence>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/* Node canvas                                                         */
-/* ------------------------------------------------------------------ */
-
-const SVC_W = 240
-const SVC_H = 102
-const RES_X = 560
-const RES_W = 220
-const RES_H = 80
-const GAP = 170
-
-function NodeCanvas({ svc, selected, state }: { svc: Service; selected?: Resource; state: RState }) {
-  const href = useHref()
-  const nav = useNav(svc.id)
-  const nodes = svc.resources.filter((r) => r.type !== "monitoring")
-  const top0 = 150
-  const span = (nodes.length - 1) * GAP + RES_H
-  const svcY = top0 + span / 2 - SVC_H / 2
-  const svcX = 140
-
-  const [t, setT] = React.useState({ x: 0, y: 0, k: 1 })
-  const [drag, setDrag] = React.useState<null | { sx: number; sy: number; ox: number; oy: number }>(null)
-  const zoom = (d: number) => setT((p) => ({ ...p, k: Math.min(2, Math.max(0.5, +(p.k + d).toFixed(2))) }))
-  useHotkey("=", () => zoom(0.1))
-  useHotkey("-", () => zoom(-0.1))
-  useHotkey("0", () => setT({ x: 0, y: 0, k: 1 }))
-
-  return (
-    <div
-      className={cn("dot-grid absolute inset-0 overflow-hidden", drag ? "cursor-grabbing" : "cursor-grab")}
-      onPointerDown={(e) => {
-        if ((e.target as HTMLElement).closest("[data-node],[data-ui]")) return
-        ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-        setDrag({ sx: e.clientX, sy: e.clientY, ox: t.x, oy: t.y })
-      }}
-      onPointerMove={(e) => drag && setT((p) => ({ ...p, x: drag.ox + e.clientX - drag.sx, y: drag.oy + e.clientY - drag.sy }))}
-      onPointerUp={() => setDrag(null)}
-      onWheel={(e) => {
-        if (e.ctrlKey || e.metaKey) zoom(e.deltaY > 0 ? -0.05 : 0.05)
-        else setT((p) => ({ ...p, x: p.x - e.deltaX, y: p.y - e.deltaY }))
-      }}
-    >
-      <div
-        className={cn("absolute top-0 left-0 origin-top-left", !drag && "transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]")}
-        style={{ transform: `translate(${t.x}px, ${t.y}px) scale(${t.k})` }}
-      >
-        <svg className="pointer-events-none absolute top-0 left-0 overflow-visible" width={1} height={1}>
-          {nodes.map((r, i) => {
-            const x1 = svcX + SVC_W
-            const y1 = svcY + SVC_H / 2 + (i - (nodes.length - 1) / 2) * 6
-            const x2 = RES_X
-            const y2 = top0 + i * GAP + RES_H / 2
-            const mx = (x1 + x2) / 2
-            const d = `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`
-            const sel = selected?.id === r.id
-            const applying = sel && state === "applying"
-            return (
-              <motion.path
-                key={r.id}
-                d={d}
-                fill="none"
-                stroke={applying ? "var(--info)" : sel && state === "failed" ? "var(--destructive)" : sel ? "var(--foreground)" : "var(--subtle)"}
-                strokeOpacity={sel ? 1 : 0.55}
-                strokeWidth={sel ? 1.5 : 1}
-                strokeDasharray={sel && !applying ? undefined : "4 4"}
-                className={applying ? "animate-[svc-dash_0.8s_linear_infinite]" : undefined}
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 0.7, ease, delay: 0.1 + i * 0.06 }}
-              />
-            )
-          })}
-        </svg>
-        <style>{`@keyframes svc-dash{to{stroke-dashoffset:-16}}`}</style>
-
-        <ServiceNode svc={svc} x={svcX} y={svcY} />
-        {nodes.map((r, i) => (
-          <ResourceNode
-            key={r.id}
-            r={r}
-            x={RES_X}
-            y={top0 + i * GAP}
-            i={i}
-            selected={selected?.id === r.id}
-            state={selected?.id === r.id ? state : undefined}
-            onClick={() => (selected?.id === r.id ? nav.close() : nav.open(r.id))}
-          />
-        ))}
-      </div>
-
-      <div data-ui className="absolute top-6 left-6 z-10">
-        <ViewToggle service={svc.id} view="canvas" />
-      </div>
-      <div data-ui className="absolute top-6 right-6 z-10">
-        <Btn variant="secondary" size="sm" href={href(`/services/${svc.id}/add`)}>
-          <Plus /> Add
-        </Btn>
-      </div>
-      <div data-ui className="absolute bottom-6 left-6 z-10 flex h-10 items-center gap-1 rounded-[10px] border border-line-2 bg-surface/90 px-1 backdrop-blur">
-        <button aria-label="Zoom out" onClick={() => zoom(-0.1)} className="grid size-8 place-items-center rounded-[7px] text-muted-foreground hover:bg-surface-2 hover:text-foreground">
-          <Minus className="size-3.5" />
-        </button>
-        <button onClick={() => setT({ x: 0, y: 0, k: 1 })} className="w-11 font-mono text-[11px] text-muted-foreground hover:text-foreground" title="Reset (0)">
-          {Math.round(t.k * 100)}%
-        </button>
-        <button aria-label="Zoom in" onClick={() => zoom(0.1)} className="grid size-8 place-items-center rounded-[7px] text-muted-foreground hover:bg-surface-2 hover:text-foreground">
-          <Plus className="size-3.5" />
-        </button>
-      </div>
-      <div data-ui>
-        <StagedBar service={svc.id} />
-      </div>
-    </div>
-  )
-}
-
-function Dots({ d }: { d: Health[] }) {
-  return (
-    <span className="flex items-center gap-1">
-      {d.map((h, i) => (
-        <StatusDot key={i} health={h} pulse={h === "fail" || h === "busy"} className="size-1.5" />
-      ))}
-    </span>
-  )
-}
-
-function ServiceNode({ svc, x, y }: { svc: Service; x: number; y: number }) {
-  const sparkData = [5, 6, 5, 7, 6, 8, 7, 9, 8, 9, 10, 9, 11]
-  return (
-    <motion.div
-      data-node
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, ease }}
-      whileHover={{ y: -2 }}
-      className="absolute flex flex-col gap-1 rounded-[14px] border border-line-3 bg-surface p-1 shadow-lg"
-      style={{ left: x, top: y, width: SVC_W, height: SVC_H }}
-    >
-      <div className="flex h-9 items-center justify-between rounded-[10px] border border-line-2 bg-surface-2 px-2.5">
-        <span className="flex items-center gap-2 text-[13px] font-medium text-foreground">
-          <IntegrationLogo name="kubernetes" className="size-4" /> {svc.name}
-        </span>
-        <Dots d={["ok", "ok"]} />
-      </div>
-      <div className="px-2 font-mono text-[11.5px] text-muted-foreground">{svc.host}</div>
-      <div className="flex items-center justify-between px-2">
-        <span className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px] text-muted-foreground">
-          <CircleCheck className="size-3.5 shrink-0 text-success" />
-          <span className="truncate">
-            {svc.version} · {svc.pods} · {svc.deployed.replace("deployed ", "")}
-          </span>
-        </span>
-        <Spark data={sparkData} width={44} height={12} />
-      </div>
-    </motion.div>
-  )
-}
-
-function ResourceNode({
-  r,
-  x,
-  y,
-  i,
-  selected,
-  state,
-  onClick,
-}: {
-  r: Resource
-  x: number
-  y: number
-  i: number
-  selected: boolean
-  state: RState
-  onClick: () => void
-}) {
-  const l = look(r, state)
-  const ring = selected
-    ? state === "applying"
-      ? "border-info ring-2 ring-info/25"
-      : state === "failed"
-        ? "border-destructive ring-2 ring-destructive/25"
-        : "border-foreground ring-2 ring-foreground/10"
-    : r.status === "draft"
-      ? "border-dashed border-line-3"
-      : "border-line-3"
-  return (
-    <motion.button
-      data-node
-      type="button"
-      onClick={onClick}
-      initial={{ opacity: 0, x: 12 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.4, ease, delay: 0.08 + i * 0.06 }}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      className={cn(
-        "absolute flex flex-col gap-1.5 rounded-[14px] border bg-surface p-1 text-left shadow-lg outline-none transition-[border-color,box-shadow] hover:shadow-xl focus-visible:ring-2 focus-visible:ring-primary",
-        ring,
-      )}
-      style={{ left: x, top: y, width: RES_W, height: RES_H }}
-    >
-      <div className="flex h-9 w-full items-center justify-between rounded-[10px] border border-line-2 bg-surface-2 px-2.5">
-        <span className={cn("flex min-w-0 items-center gap-2 text-[13px] font-medium text-foreground", r.type === "kafka" && "font-mono text-[12.5px]")}>
-          <IntegrationLogo name={r.logo} className="size-4" />
-          <span className="truncate">{nodeTitle(r)}</span>
-        </span>
-        <Dots d={l.dots} />
-      </div>
-      <div className="flex w-full items-center justify-between gap-2 px-2">
-        <span className={cn("flex min-w-0 items-center gap-1.5 text-[11.5px]", l.cls)}>
-          <l.Icon className={cn("size-3.5 shrink-0", l.spin && "animate-spin-slow")} />
-          <span className="truncate">{l.text}</span>
-        </span>
-        <Spark data={r.spark} tone={l.tone === "busy" ? "ok" : l.tone} width={44} height={12} />
-      </div>
-    </motion.button>
   )
 }
 

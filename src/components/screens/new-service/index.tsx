@@ -1,5 +1,6 @@
 "use client"
 
+import { PixelGrid, WorkingPill, WorkingText } from "@/components/idp/working"
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "motion/react"
@@ -45,6 +46,44 @@ export function NewService() {
   )
 }
 
+/* Current provisioning step, shared from the side panel to the pill under the canvas node. */
+type ProvStatus = { label: string; state: "active" | "done" | "failed" }
+const provStore = (() => {
+  let v: ProvStatus = { label: "", state: "active" }
+  const ls = new Set<() => void>()
+  return {
+    get: () => v,
+    set(n: ProvStatus) {
+      v = n
+      ls.forEach((f) => f())
+    },
+    subscribe(cb: () => void) {
+      ls.add(cb)
+      return () => {
+        ls.delete(cb)
+      }
+    },
+  }
+})()
+function GhostPill() {
+  const v = React.useSyncExternalStore(provStore.subscribe, provStore.get, provStore.get)
+  return (
+    <AnimatePresence>
+      {v.state === "active" && v.label && (
+        <motion.div
+          initial={{ opacity: 0, y: -6, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -4, scale: 0.97, filter: "blur(4px)" }}
+          transition={{ duration: 0.35, ease }}
+          className="absolute top-full left-1/2 mt-5 -translate-x-1/2"
+        >
+          <WorkingPill label={v.label} pattern="rise" />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 /* ---------- backdrop: canvas ground or classic services list ---------- */
 function Backdrop({ dim, mode, name, step }: { dim: boolean; mode: "canvas" | "classic"; name: string; step: Step }) {
   const content =
@@ -66,6 +105,7 @@ function Backdrop({ dim, mode, name, step }: { dim: boolean; mode: "canvas" | "c
               <span className="rounded border border-info/50 px-1.5 text-[10px] text-info">NEW</span>
             </div>
             <div id="ghost-status" className="px-3.5 py-2.5 text-xs" />
+            <GhostPill />
           </motion.div>
         )}
       </div>
@@ -375,6 +415,7 @@ function Provision({ name, initialFail }: { name: string; initialFail: boolean }
     if (!el) return
     el.className = cn("px-3.5 py-2.5 text-xs", failed ? "text-destructive" : done ? "text-success" : "text-info")
     el.textContent = failed ? "Build failed · retry available" : done ? "Live · dev" : `Setting up · ${Math.min(at + 1, total)}/${total}`
+    provStore.set({ label: done || failed ? "" : `${provisionSteps[at].label}…`, state: failed ? "failed" : done ? "done" : "active" })
   }, [at, failed, done, total])
 
   const retry = () => {
@@ -396,7 +437,7 @@ function Provision({ name, initialFail }: { name: string; initialFail: boolean }
           ) : done ? (
             <CircleCheck className="size-4 text-success" />
           ) : (
-            <Loader className="size-4 animate-spin text-info" />
+            <PixelGrid pattern="rise" size={5} cell={2.6} />
           )}
           <span className="text-[15px] font-semibold text-foreground">{name}</span>
         </div>
@@ -405,7 +446,7 @@ function Provision({ name, initialFail }: { name: string; initialFail: boolean }
             ? `Stopped at step ${FAIL_AT + 1} of ${total} · nothing was deployed`
             : done
               ? `Ready · ${total} of ${total} steps done`
-              : `Setting up · step ${at + 1} of ${total} · about ${Math.max(1, total - at - 2)} min left`}
+              : <WorkingText>{`Setting up · step ${at + 1} of ${total} · about ${Math.max(1, total - at - 2)} min left`}</WorkingText>}
         </p>
         <div className="mt-3 h-1 overflow-hidden rounded-full bg-surface-3">
           <motion.div
@@ -426,10 +467,10 @@ function Provision({ name, initialFail }: { name: string; initialFail: boolean }
                   <CircleCheck className="size-4 text-muted-foreground" />
                 </motion.span>
               )}
-              {state === "active" && <Loader className="size-4 animate-spin text-foreground" />}
+              {state === "active" && <PixelGrid pattern="ripple" size={3} cell={3.5} gap={1.5} className="mx-px" />}
               {state === "fail" && <TriangleAlert className="size-4 text-destructive" />}
               {state === "todo" && <CircleDashed className="size-4 text-subtle" />}
-              <span className={cn("flex-1", state === "todo" ? "text-subtle" : "text-foreground")}>{s.label}</span>
+              <span className={cn("flex-1", state === "todo" ? "text-subtle" : "text-foreground")}>{state === "active" ? <WorkingText>{s.label}</WorkingText> : s.label}</span>
               <span className={cn("font-mono text-xs", state === "active" ? "text-info" : state === "fail" ? "text-destructive" : "text-subtle")}>
                 {state === "done" ? `${s.secs}s` : state === "active" ? `${elapsed}s` : state === "fail" ? "Failed" : ""}
               </span>

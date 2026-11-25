@@ -1,11 +1,13 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { AnimatePresence, motion } from "motion/react"
 import { toast } from "sonner"
 import { Ellipsis, Loader, RotateCw, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Btn, EnvChip, ease, useHotkey } from "@/components/idp/kit"
+import { useHref } from "@/lib/mode"
 import { ROTATE_DAYS, kUsers, type KUser } from "@/lib/data-ext/kafka-postgres"
 import { KafkaTabs } from "./catalog"
 import {
@@ -47,6 +49,7 @@ function AgeBar({ age }: { age: number }) {
 }
 
 export function KafkaUsers() {
+  const href = useHref()
   const [rows, setRows] = React.useState<Row[]>(kUsers)
   const [rotate, setRotate] = useQueryState("rotate")
   const [newQ, setNew] = useQueryState("new")
@@ -120,9 +123,12 @@ export function KafkaUsers() {
                 >
                   <span className="flex-1 font-mono text-xs/4 text-foreground">{u.name}</span>
                   <span className="w-37.5 text-[13px]/4 text-muted-foreground">{u.service}</span>
-                  <span className={cn("w-30 text-[13px]/4", u.aclFailed ? "text-destructive" : "text-muted-foreground")}>
+                  <Link
+                    href={href("/kafka/acls")}
+                    className={cn("w-30 text-[13px]/4 underline-offset-2 hover:underline", u.aclFailed ? "text-destructive" : "text-muted-foreground hover:text-foreground")}
+                  >
                     {u.aclFailed ? `${u.acls} · ACL failed` : u.acls}
-                  </span>
+                  </Link>
                   <span className="w-50">
                     {u.busy ? (
                       <span className="inline-flex items-center gap-1.5 text-xs text-info">
@@ -308,7 +314,11 @@ function NewUserDialog({ open, onClose, onCreate }: { open: boolean; onClose: ()
 
 function DeleteDialog({ name, onClose, onDelete }: { name: string | null; onClose: () => void; onDelete: (n: string) => void }) {
   const [typed, setTyped] = React.useState("")
-  React.useEffect(() => setTyped(""), [name])
+  const [prevName, setPrevName] = React.useState(name)
+  if (name !== prevName) {
+    setPrevName(name)
+    setTyped("")
+  }
   return (
     <Modal open={!!name} onClose={onClose}>
       <h2 className="text-base font-semibold text-foreground">Delete {name}?</h2>

@@ -301,9 +301,17 @@ export function PatternsScreen() {
   )
 }
 
+/* Skeleton bars. Declared at module level so they keep identity across renders. */
+function Shimmer4({ className }: { className?: string }) {
+  return <span className={cn("skeleton-shimmer block rounded-[4px]", className)} />
+}
+function Shimmer6({ className }: { className?: string }) {
+  return <span className={cn("skeleton-shimmer block rounded-[6px]", className)} />
+}
+
 /* ================= 09d Skeleton ================= */
 export function SkeletonScreen() {
-  const S = ({ className }: { className?: string }) => <span className={cn("skeleton-shimmer block rounded-[4px]", className)} />
+  const S = Shimmer4
   return (
     <Frame crumbs={<Crumb icon={ActivityIcon}>Activity</Crumb>}>
       <div aria-busy className="flex flex-col gap-4">
@@ -422,7 +430,7 @@ export function HomeStates({ state }: { state: string }) {
 function HomeLoading({ error }: { error: boolean }) {
   const [failed, setFailed] = React.useState(error)
   const [retry, setRetry] = React.useState(false)
-  const S = ({ className }: { className?: string }) => <span className={cn("skeleton-shimmer block rounded-[6px]", className)} />
+  const S = Shimmer6
   const doRetry = () => { setRetry(true); setTimeout(() => { setRetry(false); setFailed(false); toast.success("Kafka status is back") }, 1000) }
   return (
     <div aria-busy className="flex flex-col gap-5">
@@ -465,7 +473,7 @@ export function OverviewScreen() {
   const issueIcon = (t: string) => t === "busy" ? <Loader className="size-3.5 animate-spin text-info" /> : <TriangleAlert className={cn("size-3.5", t === "fail" ? "text-destructive" : "text-warning")} />
   const line = (pts: number[]) => pts.map((v, i) => `${i ? "L" : "M"}${(i / (pts.length - 1)) * 380},${130 - v * 5.5}`).join(" ")
   const total = openByModule.reduce((a, b) => a + b.n, 0)
-  let acc = 0
+  const offsets = openByModule.map((_, i) => openByModule.slice(0, i).reduce((a, b) => a + b.n, 0))
   return (
     <Frame crumbs={<span className="flex items-center gap-2 text-[14px] text-muted-foreground"><Home className="size-4" /> Home <span className="text-faint">›</span> <span className="flex items-center gap-2 font-medium text-foreground"><BarChart3 className="size-4" /> Platform overview</span></span>}>
       <div className="flex items-start justify-between">
@@ -527,7 +535,7 @@ export function OverviewScreen() {
           <span className="text-[15px] font-medium">Open requests · by module</span>
           <div className="flex items-center gap-6">
             <svg viewBox="0 0 120 120" className="size-[120px] -rotate-90">
-              {openByModule.map((m, i) => { const c = 2 * Math.PI * 48; const off = acc; acc += m.n; return <motion.circle key={m.label} cx="60" cy="60" r="48" fill="none" strokeWidth="12" className={["stroke-foreground", "stroke-subtle", "stroke-info", "stroke-warning/60", "stroke-surface-3"][i]} strokeDasharray={`${(m.n / total) * c - 2} ${c}`} strokeDashoffset={-(off / total) * c} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.08 }} /> })}
+              {openByModule.map((m, i) => { const c = 2 * Math.PI * 48; const off = offsets[i]; return <motion.circle key={m.label} cx="60" cy="60" r="48" fill="none" strokeWidth="12" className={["stroke-foreground", "stroke-subtle", "stroke-info", "stroke-warning/60", "stroke-surface-3"][i]} strokeDasharray={`${(m.n / total) * c - 2} ${c}`} strokeDashoffset={-(off / total) * c} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.08 }} /> })}
               <text x="60" y="62" textAnchor="middle" transform="rotate(90 60 60)" className="fill-foreground text-[22px] font-semibold"><CountUp to={25} /></text>
               <text x="60" y="78" textAnchor="middle" transform="rotate(90 60 60)" className="fill-subtle text-[9px]">open</text>
             </svg>

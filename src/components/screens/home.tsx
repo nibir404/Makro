@@ -44,16 +44,7 @@ export function HomeHero({ approvals }: { approvals: number }) {
   const href = useHref()
   const router = useRouter()
   // Static copy from the design; refreshed on the client after mount.
-  const [{ day, date, greet }, setNow] = React.useState({ day: "Monday", date: "24 Nov", greet: "Good morning" })
-  React.useEffect(() => {
-    const t = new Date()
-    const h = t.getHours()
-    setNow({
-      day: t.toLocaleDateString("en-GB", { weekday: "long" }),
-      date: t.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-      greet: h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening",
-    })
-  }, [])
+  const [day, date, greet] = React.useSyncExternalStore(noopSubscribe, clientNow, () => SERVER_NOW).split("|")
   useHotkey("n", () => router.push(href("/services/order-service/add")))
 
   return (
@@ -101,6 +92,18 @@ export function HomeHero({ approvals }: { approvals: number }) {
 /* ================================================================== */
 /* Canvas · 01a Home                                                   */
 /* ================================================================== */
+
+const noopSubscribe = () => () => {}
+const SERVER_NOW = "Monday|24 Nov|Good morning"
+function clientNow() {
+  const t = new Date()
+  const h = t.getHours()
+  return [
+    t.toLocaleDateString("en-GB", { weekday: "long" }),
+    t.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+    h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening",
+  ].join("|")
+}
 
 export function CanvasHome() {
   const href = useHref()

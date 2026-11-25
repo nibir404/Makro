@@ -27,7 +27,7 @@ import {
   useSort,
 } from "./ui"
 
-export function KafkaTabs({ active }: { active: "topics" | "users" | "requests" }) {
+export function KafkaTabs({ active }: { active: "topics" | "users" | "acls" | "requests" }) {
   const href = useHref()
   return (
     <Segmented
@@ -36,6 +36,7 @@ export function KafkaTabs({ active }: { active: "topics" | "users" | "requests" 
       items={[
         { key: "topics", label: "Topics", href: href("/kafka") },
         { key: "users", label: "Users", href: href("/kafka/users") },
+        { key: "acls", label: "ACLs", href: href("/kafka/acls") },
         { key: "requests", label: "Requests · 3", href: href("/inbox?kind=kafka") },
       ]}
     />

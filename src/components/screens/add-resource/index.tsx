@@ -1,5 +1,6 @@
 "use client"
 
+import { PixelGrid } from "@/components/idp/working"
 import * as React from "react"
 import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
@@ -18,6 +19,8 @@ import {
   dbSizes,
   netHosts,
   readStaged,
+  readStagedRaw,
+  noopSubscribe,
   writeStaged,
   stageChange,
   type StagedChange,
@@ -61,7 +64,6 @@ export function AddPick() {
     else if (e.key === "Escape") router.push(href(`/services/${id}`))
   }
 
-  let lastGroup = ""
   return (
     <FlowPanel service={id}>
       <PanelHeader title={`Add to ${id}`} close={href(`/services/${id}`)} />
@@ -84,8 +86,7 @@ export function AddPick() {
       <Stagger className="flex flex-1 flex-col overflow-y-auto px-3 pb-4">
         {list.length === 0 && <p className="px-2 pt-8 text-center text-[13px] text-subtle">No resource matches “{q}”.</p>}
         {list.map((t, i) => {
-          const header = t.group !== lastGroup
-          lastGroup = t.group
+          const header = i === 0 || t.group !== list[i - 1].group
           return (
             <StaggerItem key={t.id}>
               {header && <div className="px-2 pt-5 pb-2 text-xs text-muted-foreground">{t.group}</div>}
@@ -223,7 +224,7 @@ function KafkaForm({ svc, tried, bind }: FormProps) {
         : null
   const hint: Hint = err ? (tried || name ? { tone: "err", text: err } : null) : { tone: "ok", text: "Available · matches domain.entity.event.vN" }
   const acl = { produce: "WRITE", consume: "READ", both: "READ, WRITE" }[mode]
-  bind.current = () => ({
+  React.useImperativeHandle(bind, () => () => ({
     ok: !err,
     change: {
       id: `kafka-${name}`,
@@ -233,7 +234,7 @@ function KafkaForm({ svc, tried, bind }: FormProps) {
       logo: "kafka",
       lines: [`partitions: ${parts}   replicationFactor: 3`, `retention.ms: ${days * 86400000}`, `acl: svc-${svc} ${acl}`],
     },
-  })
+  }))
   return (
     <>
       <div>
@@ -338,7 +339,7 @@ function PostgresForm({ svc, tried, bind }: FormProps) {
     rw: "SELECT, INSERT, UPDATE, DELETE on schema orders.",
     owner: "Owns schema orders — can run migrations. Needs DBA approval.",
   }[access]
-  bind.current = () => ({
+  React.useImperativeHandle(bind, () => () => ({
     ok: !err,
     change: {
       id: `pg-${norm}`,
@@ -348,7 +349,7 @@ function PostgresForm({ svc, tried, bind }: FormProps) {
       logo: "postgres",
       lines: [`database: ${db}`, `grant: ${access === "ro" ? "SELECT" : access === "rw" ? "READ WRITE" : "OWNER"} ON orders`, `vault: secret/${svc}/pg → ${env}`],
     },
-  })
+  }))
   return (
     <>
       <div>
@@ -407,7 +408,7 @@ function DatabaseForm({ tried, bind }: FormProps) {
   const err = !name ? "Name is required" : !/^[a-z][a-z0-9-]{2,30}$/.test(name) ? "3–31 chars, lowercase, digits and -" : null
   const s = dbSizes.find((d) => d.id === size)!
   const mult = kind === "redis" ? 0.6 : kind === "s3" ? 0.1 : 1
-  bind.current = () => ({
+  React.useImperativeHandle(bind, () => () => ({
     ok: !err,
     change: {
       id: `db-${name}`,
@@ -417,7 +418,7 @@ function DatabaseForm({ tried, bind }: FormProps) {
       logo: "pulumi",
       lines: [`stack: commerce-prod`, `size: ${s.name.toLowerCase()} (${s.spec})`, `cost: ~$${Math.round(s.cost * mult)}/mo`],
     },
-  })
+  }))
   return (
     <>
       <div>
@@ -489,7 +490,7 @@ function SecretForm({ svc, tried, bind }: FormProps) {
   const err = !key ? "Key is required" : !/^[A-Z][A-Z0-9_]*$/.test(key) ? "Use UPPER_SNAKE_CASE" : null
   const envs = same ? (["all"] as const) : (["dev", "qa", "prod"] as const)
   const filled = Object.entries(vals).filter(([, v]) => v).map(([k]) => k)
-  bind.current = () => ({
+  React.useImperativeHandle(bind, () => () => ({
     ok: !err && filled.length > 0,
     change: {
       id: `secret-${key}`,
@@ -499,7 +500,7 @@ function SecretForm({ svc, tried, bind }: FormProps) {
       logo: "vault",
       lines: [`path: secret/${svc}/${key.toLowerCase()}`, `envs: ${same ? "all" : filled.join(", ")}`, "value: ******** (encrypted)"],
     },
-  })
+  }))
   return (
     <>
       <div>
@@ -565,7 +566,7 @@ function NetworkForm({ svc, tried, bind }: FormProps) {
     : host
       ? { tone: "err", text: hostErr }
       : null
-  bind.current = () => ({
+  React.useImperativeHandle(bind, () => () => ({
     ok: !hostErr && !reasonErr && /^\d+$/.test(port),
     change: {
       id: `net-${host}`,
@@ -575,7 +576,7 @@ function NetworkForm({ svc, tried, bind }: FormProps) {
       logo: "netbird",
       lines: [`group: commerce-${who === "svc" ? svc : "alex.m"}`, `expires: ${ttl === "perm" ? "never" : ttl === "8h" ? "8 hours" : "7 days"}`],
     },
-  })
+  }))
   return (
     <>
       <div>
@@ -653,7 +654,7 @@ function MonitoringForm({ svc, tried, bind }: FormProps) {
     chan: !/^#[a-z0-9-]{2,}$/.test(chan) ? "Slack channel like #team-alerts" : null,
     none: !apm && !logs && !uptime ? "Pick at least one signal" : null,
   }
-  bind.current = () => ({
+  React.useImperativeHandle(bind, () => () => ({
     ok: !Object.values(errs).some(Boolean),
     change: {
       id: "mon-datadog",
@@ -663,7 +664,7 @@ function MonitoringForm({ svc, tried, bind }: FormProps) {
       logo: "datadog",
       lines: [`tags: service:${svc}`, `alert: p95 > ${p95}ms or errors > ${errRate}%`, `notify: ${chan}`],
     },
-  })
+  }))
   const rows: [string, string, boolean, (v: boolean) => void][] = [
     ["APM traces", "Latency, throughput, errors per endpoint", apm, setApm],
     ["Logs", "stdout · kept 15 days", logs, setLogs],
@@ -720,10 +721,13 @@ export function AddReview() {
   const { id } = useSvc()
   const href = useHref()
   const router = useRouter()
-  const [list, setList] = React.useState<StagedChange[] | null>(null)
+  // Staged list lives in sessionStorage: null on the server, read on the client.
+  const storedRaw = React.useSyncExternalStore(noopSubscribe, readStagedRaw, () => null)
+  const stored = React.useMemo(() => (storedRaw === null ? null : readStaged()), [storedRaw])
+  const [edited, setList] = React.useState<StagedChange[] | null>(null)
+  const list = edited ?? stored
   const [note, setNote] = React.useState("Points redemption events for the new rewards flow.")
   const [busy, setBusy] = React.useState(false)
-  React.useEffect(() => setList(readStaged()), [])
 
   const remove = (c: StagedChange) => {
     const prev = list ?? []
@@ -912,7 +916,7 @@ export function AddSubmitted() {
                     s.id === "review" ? (
                       <Clock className="size-4 text-warning" />
                     ) : (
-                      <Loader className="size-4 animate-spin text-info" />
+                      <PixelGrid pattern="ripple" size={3} cell={3.5} gap={1.5} className="mx-px" />
                     )
                   ) : (
                     <CircleDashed className="size-4 text-subtle" />

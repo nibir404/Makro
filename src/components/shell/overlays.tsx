@@ -3,7 +3,7 @@
 /* Shell overlays matched to Paper 09a/R1d (⌘K), 09b (avatar), 09f (platform), R1e (notifications). */
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "motion/react"
 import { useTheme } from "next-themes"
@@ -61,8 +61,10 @@ const CmdContext = React.createContext<{ open: (q?: string) => void }>({ open: (
 export const useCommandMenu = () => React.useContext(CmdContext)
 
 export function CommandMenuProvider({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = React.useState(false)
-  const [q, setQ] = React.useState("")
+  // Reviewers can open a frame directly: ?cmdk=rollb (09a) or ?cmdk=rotate%20order (R1d)
+  const cmdkParam = useSearchParams().get("cmdk")
+  const [open, setOpen] = React.useState(cmdkParam !== null)
+  const [q, setQ] = React.useState(cmdkParam === null || cmdkParam === "1" ? "" : cmdkParam)
   const [idx, setIdx] = React.useState(0)
   const href = useHref()
   const router = useRouter()
@@ -71,14 +73,6 @@ export function CommandMenuProvider({ children }: { children: React.ReactNode })
   const mode = useMode()
   useHotkey("k", () => setOpen((o) => !o), { meta: true })
   useHotkey("n", () => router.push(href("/services/order-service/add")), { enabled: !open })
-  // Reviewers can open a frame directly: ?cmdk=rollb (09a) or ?cmdk=rotate%20order (R1d)
-  React.useEffect(() => {
-    const v = new URLSearchParams(window.location.search).get("cmdk")
-    if (v !== null) {
-      setQ(v === "1" ? "" : v)
-      setOpen(true)
-    }
-  }, [])
 
   const words = q.toLowerCase().trim().split(/\s+/).filter(Boolean)
   const list = words.length ? CMDS.filter((c) => words.every((w) => c.keys.includes(w) || c.label.toLowerCase().includes(w))) : CMDS.filter((c) => DEFAULT_IDS.includes(c.id))
@@ -188,11 +182,9 @@ export const PLATFORM_MODULES = [
 export function PlatformMenu({ trigger, defaultOpen }: { trigger: React.ReactElement; defaultOpen?: boolean }) {
   const href = useHref()
   const router = useRouter()
-  const [open, setOpen] = React.useState(!!defaultOpen)
+  const menuParam = useSearchParams().get("menu")
+  const [open, setOpen] = React.useState(!!defaultOpen || menuParam === "platform")
   const [hover, setHover] = React.useState(0)
-  React.useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("menu") === "platform") setOpen(true)
-  }, [])
   const go = (p: string) => { setOpen(false); router.push(href(p)) }
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -238,11 +230,9 @@ export function AvatarMenu({ trigger, align = "end" }: { trigger: React.ReactEle
   const { theme, setTheme } = useTheme()
   const swap = useSwapModeHref()
   const mode = useMode()
-  const [open, setOpen] = React.useState(false)
+  const menuParam = useSearchParams().get("menu")
+  const [open, setOpen] = React.useState(menuParam === "avatar")
   const [hover, setHover] = React.useState(0)
-  React.useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("menu") === "avatar") setOpen(true)
-  }, [])
   const go = (p: string) => { setOpen(false); router.push(href(p)) }
   const rows: [string, React.ComponentType<{ className?: string }>, string, string?][] = [
     ["Profile", User, "/profile"],
@@ -327,17 +317,16 @@ const NOTE_ICON: Record<Note["tone"], [React.ComponentType<{ className?: string 
   expiring: [TriangleAlert, "text-warning bg-warning/10"],
 }
 
+const noopSubscribe = () => () => {}
+
 export function NotificationsButton({ className }: { className?: string }) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(useSearchParams().get("notifications") === "1")
   const [tab, setTab] = React.useState<"all" | "action" | "mentions">("all")
   const [read, setRead] = React.useState<Set<string>>(new Set())
   const href = useHref()
   const router = useRouter()
-  const [mounted, setMounted] = React.useState(false)
-  React.useEffect(() => {
-    setMounted(true)
-    if (new URLSearchParams(window.location.search).get("notifications") === "1") setOpen(true)
-  }, [])
+  // Portal target only exists in the browser.
+  const mounted = React.useSyncExternalStore(noopSubscribe, () => true, () => false)
   React.useEffect(() => {
     if (!open) return
     const on = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false)

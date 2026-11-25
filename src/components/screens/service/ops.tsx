@@ -1,5 +1,6 @@
 "use client"
 
+import { PixelGrid } from "@/components/idp/working"
 /**
  * OWNER: service-ops agent.
  * Renders deploy-operation dialogs driven by `?op=` on any /services/[service] route:
@@ -360,7 +361,7 @@ function Rollout({ close }: { close: () => void }) {
         close={close}
         title={
           <>
-            {aborted ? <X className="size-4 text-destructive" /> : done ? <Check className="size-4 text-success" /> : <Loader className={cn("size-4 text-info", !paused && "animate-spin")} />}
+            {aborted ? <X className="size-4 text-destructive" /> : done ? <Check className="size-4 text-success" /> : <PixelGrid pattern="scan" size={5} cell={2.6} paused={paused} />}
             {aborted ? "Rolled back · prod" : done ? "v1.42.0 live · prod" : "Rolling out v1.42.0 · prod"}
           </>
         }

@@ -70,6 +70,16 @@ const DEFAULT_STAGED: StagedChange[] = [
 ]
 
 const KEY = "idp.staged.v1"
+/** Raw sessionStorage value ("" when empty); a stable string snapshot for useSyncExternalStore. */
+export function readStagedRaw(): string {
+  try {
+    return sessionStorage.getItem(KEY) ?? ""
+  } catch {
+    return ""
+  }
+}
+export const noopSubscribe = () => () => {}
+
 export function readStaged(): StagedChange[] {
   try {
     const raw = sessionStorage.getItem(KEY)

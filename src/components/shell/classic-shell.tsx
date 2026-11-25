@@ -200,21 +200,32 @@ export function ClassicTopbar({ crumbs }: { crumbs?: React.ReactNode }) {
   )
 }
 
+const SIDEBAR_KEY = "idp-sidebar"
+function readSidebar() {
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) === "1"
+  } catch {
+    return false
+  }
+}
+function subscribeSidebar(cb: () => void) {
+  window.addEventListener(SIDEBAR_KEY, cb)
+  window.addEventListener("storage", cb)
+  return () => {
+    window.removeEventListener(SIDEBAR_KEY, cb)
+    window.removeEventListener("storage", cb)
+  }
+}
+
 export function ClassicShell({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = React.useState(false)
+  const collapsed = React.useSyncExternalStore(subscribeSidebar, readSidebar, () => false)
   const pathname = usePathname()
-  React.useEffect(() => {
+  const toggle = () => {
     try {
-      setCollapsed(localStorage.getItem("idp-sidebar") === "1")
+      localStorage.setItem(SIDEBAR_KEY, collapsed ? "0" : "1")
     } catch {}
-  }, [])
-  const toggle = () =>
-    setCollapsed((c) => {
-      try {
-        localStorage.setItem("idp-sidebar", c ? "0" : "1")
-      } catch {}
-      return !c
-    })
+    window.dispatchEvent(new Event(SIDEBAR_KEY))
+  }
   return (
     <CollapseCtx.Provider value={{ collapsed, toggle }}>
       <div className="flex min-h-screen bg-page">

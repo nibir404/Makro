@@ -5,18 +5,16 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AnimatePresence, motion } from "motion/react"
 import { toast } from "sonner"
-import { Waypoints, Check, ChevronDown, Loader, Plus, RotateCw, Search, Trash2, TriangleAlert, X, Network, List, CircleCheck } from "lucide-react"
+import { Waypoints, Check, ChevronDown, Loader, Plus, RotateCw, Search, Trash2, TriangleAlert, X, Network, CircleCheck } from "lucide-react"
 import { ReactFlow, Background, Handle, Position, type Edge, type Node, type NodeTypes } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 import { cn } from "@/lib/utils"
 import { useHref, useMode } from "@/lib/mode"
 import { Btn, EnvChip, FadeIn, IntegrationLogo, Stagger, StaggerItem, StatusDot, StatusPill, ease, useHotkey } from "@/components/idp/kit"
-import type { Env } from "@/lib/data"
 import {
   getStack,
   infraStacks,
   planDiff,
-  reqRows,
   resourceCatalog,
   rollout,
   stackCost,

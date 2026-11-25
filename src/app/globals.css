@@ -212,6 +212,50 @@
     background-size: 800px 100%;
     animation: shimmer 1.6s linear infinite;
   }
+
+  /* Working indicator (components/idp/working.tsx): LED dot-matrix + glow sweeping across a label. */
+  .px-cell {
+    display: block;
+    border-radius: 1px;
+    background: var(--primary);
+    opacity: 0.14;
+    box-shadow: 0 0 4px color-mix(in oklab, var(--primary) 75%, transparent);
+    animation: px-pulse 1.6s ease-in-out infinite;
+    animation-delay: var(--d, 0s);
+  }
+  .px-off {
+    animation: none;
+    opacity: 0.08;
+    box-shadow: none;
+  }
+  .px-paused {
+    animation-play-state: paused;
+  }
+  .text-sweep {
+    background-image: linear-gradient(
+      90deg,
+      var(--muted-foreground) 0%,
+      var(--muted-foreground) 38%,
+      color-mix(in oklab, var(--primary) 55%, white) 50%,
+      var(--muted-foreground) 62%,
+      var(--muted-foreground) 100%
+    );
+    background-size: 260% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: text-sweep 2.4s linear infinite;
+  }
+  .light .text-sweep {
+    background-image: linear-gradient(
+      90deg,
+      var(--muted-foreground) 0%,
+      var(--muted-foreground) 38%,
+      var(--primary) 50%,
+      var(--muted-foreground) 62%,
+      var(--muted-foreground) 100%
+    );
+  }
 }
 
 @keyframes pulse-dot {
@@ -225,6 +269,15 @@
 @keyframes dash {
   to { stroke-dashoffset: -16; }
 }
+@keyframes px-pulse {
+  0%, 100% { opacity: 0.14; transform: scale(0.82); }
+  35% { opacity: 1; transform: scale(1); }
+  65% { opacity: 0.4; }
+}
+@keyframes text-sweep {
+  from { background-position: 130% 0; }
+  to { background-position: -30% 0; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -232,4 +285,6 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  .px-cell:not(.px-off) { opacity: 0.75; transform: none; }
+  .text-sweep { color: var(--muted-foreground); background: none; }
 }

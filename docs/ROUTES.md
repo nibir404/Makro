@@ -28,7 +28,11 @@ Use the Canvas/Classic toggle to switch on the same screen. Change the theme fro
 | Infrastructure | `/infra` (`?tab=requests`), `/infra/new`, `/infra/stacks/commerce-order-service` (`?view=graph`), `/infra/stacks/supply-chain-replenish?state=error`, `/infra/requests/IR-1042` (`?outcome=approved\|verifying\|done\|rejected`) | 12a–f · 16g–h |
 | Network access | `/network` (`?revoke=pg-prod-orders`), `/network/groups`, `/network/lookup`, `/network/review`, `/network/map`, `/network/request` | 13a–f · 16e |
 | Secrets | `/secrets`, `/secrets/order-service`, `/versions?key=DATABASE_URL`, `/compare`, `/upload`, `/access-log`, `/tree`, `/tokens` | 14a–f · 16f |
+| Vault actions | `/secrets/order-service?rotate=secretid` (rotate SecretID, shown once), `?branch=new` (create branch), `?inherit=1` (manage inheritance); delete a key from its row (trash icon); delete a branch from its tab header | no Paper frame · ported from old IDP Kura 05i/05k/05p/05q/05t/05u |
 | Kafka | `/kafka` (`?view=cluster`), `/kafka/topics/orders.created.v1` (`?tab=…`), `/kafka/users` (`?rotate=…`, `?new=1`) | 16a · 16b · C4d |
+| Kafka ACLs | `/kafka/acls` (`?apply=1` bulk confirm, `?state=partial` partial failure, `?replace=ka-0001`) | no Paper frame · ported from old IDP 06h–06n |
 | Postgres | `/postgres`, `/postgres/databases`, `/postgres/pg-prod-orders` (`?rotate=order_svc_rw`, `?rollback=1`) | 16c · C4e |
 
-Keyboard: ⌘K palette, `N` new request, `J/K` move, `A` approve, `R` reject or review, `Esc` close panels, `=` `-` `0` zoom the canvas.
+Keyboard: ⌘K palette, `N` new request, `J/K` move, `A` approve, `R` reject or review, `Esc` close panels.
+
+Service canvas: `C` create on canvas, `⌘↵` review staged changes, `↑ ↓` / `J K` previous / next resource, `/` find, `F` fit, `=` `-` zoom, `0` 100%, `?` shortcuts. ⌘ + scroll zooms at the cursor, drag moves nodes (layout is remembered per service), right-click a node for actions (open, zoom, history, copy, remove from service), right-click the service for Delete service.

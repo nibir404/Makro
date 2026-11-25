@@ -41,7 +41,7 @@ const REASONS = ["No longer needed", "Task finished", "Security concern", "Other
 
 export function NetworkHeader({ count, onRequest }: { count: number; onRequest: () => void }) {
   const href = useHref()
-  const [tab, setTab] = React.useState<"grants" | "groups" | "review">("grants")
+  const [tab, setTab] = React.useState<"grants" | "groups" | "review" | "lookup">("grants")
   return (
     <div className="flex items-start justify-between">
       <div className="flex items-start gap-3">
@@ -62,6 +62,7 @@ export function NetworkHeader({ count, onRequest }: { count: number; onRequest: 
             { value: "grants", label: "Grants", href: href("/network") },
             { value: "groups", label: "Groups", href: href("/network/groups") },
             { value: "review", label: "Review · 9", href: href("/network/review") },
+            { value: "lookup", label: "Lookup", href: href("/network/lookup") },
           ]}
         />
         <Btn variant="primary" size="md" kbd="R" onClick={onRequest}>

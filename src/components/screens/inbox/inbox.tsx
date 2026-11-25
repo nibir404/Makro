@@ -31,7 +31,10 @@ function useInbox() {
   const setQ = React.useCallback(
     (patch: Record<string, string | null>) => {
       const q = new URLSearchParams(params.toString())
-      for (const [k, v] of Object.entries(patch)) (v === null ? q.delete(k) : q.set(k, v))
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === null) q.delete(k)
+        else q.set(k, v)
+      }
       const s = q.toString()
       router.replace(s ? `${pathname}?${s}` : pathname, { scroll: false })
     },

@@ -5,15 +5,14 @@ import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { AnimatePresence, motion } from "motion/react"
 import { toast } from "sonner"
-import { Boxes, Check, Copy, Eye, EyeOff, KeyRound, Loader2, MoreHorizontal, Plus, TriangleAlert } from "lucide-react"
+import { Boxes, Check, Copy, Eye, EyeOff, GitBranch, KeyRound, Layers, Loader2, MoreHorizontal, Plus, Trash2, TriangleAlert, Undo2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useHref } from "@/lib/mode"
 import { envCounts, secretRows, secretVersions, serviceTokens, type SecretRow } from "@/lib/data-ext/network-secrets"
 import { Btn, StatusDot, ease, useHotkey } from "@/components/idp/kit"
 import { Crumbs, Drawer, Frame, Modal, Segmented, VaultMark } from "../network/ui"
 import { logEntry, nowHHMM } from "./store"
-
-type Env = "dev" | "qa" | "prod"
+import { CreateBranchModal, DeleteBranchModal, InheritanceModal, RotateSecretIdModal, type Branch } from "./vault-dialogs"
 
 export function useProject() {
   const p = useParams<{ project?: string }>()
@@ -40,7 +39,16 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
   const router = useRouter()
   const sp = useSearchParams()
   const base = href(`/secrets/${project}`)
-  const [env, setEnv] = React.useState<Env>((sp.get("env") as Env) ?? "prod")
+  const [env, setEnv] = React.useState<string>(sp.get("env") ?? "prod")
+  const [branches, setBranches] = React.useState<Branch[]>([])
+  const branch = branches.find((b) => b.name === env) ?? null
+  const counts: Record<string, number> = { ...envCounts, ...Object.fromEntries(branches.map((b) => [b.name, envCounts[b.from]])) }
+  const [deleted, setDeleted] = React.useState<Set<string>>(new Set())
+  const [rotateOpen, setRotateOpen] = React.useState(sp.get("rotate") === "secretid")
+  const [branchNew, setBranchNew] = React.useState(sp.get("branch") === "new")
+  const [branchDel, setBranchDel] = React.useState<Branch | null>(null)
+  const [inheritOpen, setInheritOpen] = React.useState(sp.get("inherit") === "1")
+  const [parents, setParents] = React.useState(["shared/commerce", "platform/observability", "platform/auth"])
   const [rows, setRows] = React.useState<SecretRow[]>(secretRows)
   const [staged, setStaged] = React.useState<Record<string, string>>({})
   const [added, setAdded] = React.useState<string[]>([])
@@ -54,7 +62,7 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
   const [bulk, setBulk] = React.useState(false)
   const [bulkText, setBulkText] = React.useState("")
 
-  const nStaged = Object.keys(staged).length
+  const nStaged = Object.keys(staged).length + deleted.size
   const visible = expanded ? rows : rows.slice(0, 5 + added.length)
 
   // reveal countdown
@@ -110,18 +118,41 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
     setDraft("")
     setShowDraft(true)
   }
-  const rotate = (r: SecretRow) => {
-    setStaged((s) => ({ ...s, [r.key]: "s.new…(rotated)" }))
-    toast("New SecretID staged", { description: "Old one stays valid 24h after save" })
+  const onRotated = () => {
+    setRows((rs) => rs.map((x) => (x.key === "SECRET_ID" ? { ...x, value: "s.hvs.CAES…eF0gH", note: "valid 90d", noteTone: "muted", updated: "just now · Alex", action: undefined } : x)))
+    logEntry({ when: nowHHMM(), who: "Alex", kind: "change", verb: "rotated", key: "SECRET_ID", rest: ` · ${env} · old one valid 24h` })
+  }
+  const toggleDelete = (r: SecretRow) => {
+    if (added.includes(r.key)) {
+      setRows((rs) => rs.filter((x) => x.key !== r.key))
+      setAdded((a) => a.filter((k) => k !== r.key))
+      return
+    }
+    setDeleted((d) => {
+      const n = new Set(d)
+      if (n.has(r.key)) n.delete(r.key)
+      else n.add(r.key)
+      return n
+    })
+  }
+  const discardAll = () => {
+    setStaged({})
+    setDeleted(new Set())
   }
   const save = () => {
     setSaving(true)
     setTimeout(() => {
       const prevRows = rows
-      setRows((rs) => rs.map((r) => (staged[r.key] !== undefined ? { ...r, value: staged[r.key], updated: "just now · Alex", note: r.key === "SECRET_ID" ? undefined : r.note } : r)))
+      setRows((rs) =>
+        rs
+          .filter((r) => !deleted.has(r.key))
+          .map((r) => (staged[r.key] !== undefined ? { ...r, value: staged[r.key], updated: "just now · Alex", note: r.key === "SECRET_ID" ? undefined : r.note } : r)),
+      )
       Object.keys(staged).forEach((k) => logEntry({ when: nowHHMM(), who: "Alex", kind: "change", verb: "changed", key: k, rest: ` · ${env}` }))
+      deleted.forEach((k) => logEntry({ when: nowHHMM(), who: "Alex", kind: "change", verb: "deleted", key: k, rest: ` · ${env}` }))
       const n = nStaged
       setStaged({})
+      setDeleted(new Set())
       setAdded([])
       setSaving(false)
       setConfirm(false)
@@ -179,17 +210,32 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
 
       <div className="mt-4 flex items-end justify-between border-b border-line-2">
         <div className="flex">
-          {(["dev", "qa", "prod"] as Env[]).map((e) => (
-            <button key={e} onClick={() => setEnv(e)} className={cn("relative px-3 pb-2.5 text-sm", env === e ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {e} · {envCounts[e]}
+          {(["dev", "qa", "prod", ...branches.map((b) => b.name)] as string[]).map((e) => (
+            <button key={e} onClick={() => setEnv(e)} className={cn("relative flex items-center gap-1.5 px-3 pb-2.5 text-sm", env === e ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
+              {branches.some((b) => b.name === e) && <GitBranch className="size-3.5" />}
+              {e} · {counts[e]}
               {env === e && <motion.span layoutId="env-tab" transition={{ duration: 0.3, ease }} className="absolute right-0 bottom-[-1px] left-0 h-0.5 bg-foreground" />}
             </button>
           ))}
-          <Link href={`${base}/tokens`} className="px-3 pb-2.5 text-sm text-muted-foreground hover:text-foreground">
+          <button onClick={() => setBranchNew(true)} className="px-3 pb-2.5 text-sm text-muted-foreground hover:text-foreground">
             + branch
-          </Link>
+          </button>
         </div>
-        <div className="pb-2.5 text-[12.5px] text-muted-foreground">
+        <div className="flex items-center gap-1 pb-2.5 text-[12.5px] text-muted-foreground">
+          {branch && (
+            <>
+              <span className="text-subtle">branch of {branch.from}</span>
+              <button onClick={() => setBranchDel(branch)} className="flex items-center gap-1 rounded px-1 text-destructive/90 hover:text-destructive">
+                <Trash2 className="size-3" /> Delete branch
+              </button>
+              <span className="text-subtle">·</span>
+            </>
+          )}
+          <button onClick={() => setInheritOpen(true)} className="flex items-center gap-1 hover:text-foreground" title="Manage inheritance">
+            <Layers className="size-3" /> Inherits {parents[0] ?? "nothing"}
+            {parents.length > 1 && <span className="text-subtle">+{parents.length - 1}</span>}
+          </button>{" "}
+          ·{" "}
           <Link href={`${base}/access-log`} className="hover:text-foreground">Logs</Link> ·{" "}
           <Link href={`${base}/tree`} className="hover:text-foreground">Access</Link> ·{" "}
           <Link href={`${base}/tokens`} className="hover:text-foreground">Service tokens</Link>
@@ -206,6 +252,7 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
           {visible.map((r) => {
             const isEdit = editing === r.key
             const isStaged = staged[r.key] !== undefined
+            const isDeleted = deleted.has(r.key)
             const secs = revealed[r.key]
             return (
               <motion.div
@@ -218,9 +265,12 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
                 className={cn(
                   "group relative border-b border-line last:border-0",
                   (isEdit || isStaged) && "bg-surface-2/60",
+                  isDeleted && "bg-destructive/5",
                 )}
               >
-                {(isEdit || isStaged) && <motion.span layoutId={`bar-${r.key}`} className={cn("absolute top-0 bottom-0 left-0 w-0.5", isEdit ? "bg-info" : "bg-primary")} />}
+                {(isEdit || isStaged || isDeleted) && (
+                  <motion.span layoutId={`bar-${r.key}`} className={cn("absolute top-0 bottom-0 left-0 w-0.5", isDeleted ? "bg-destructive" : isEdit ? "bg-info" : "bg-primary")} />
+                )}
                 <div className={cn("grid grid-cols-[260px_1fr_220px] items-center px-4", isEdit ? "py-3" : "h-[41px]")}>
                   {added.includes(r.key) && isEdit ? (
                     <input
@@ -236,10 +286,12 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
                       className="mr-4 h-8 rounded-[7px] border border-line-3 bg-page px-2 font-mono text-[12.5px] text-foreground outline-none"
                     />
                   ) : (
-                    <span className="font-mono text-[12.5px] text-foreground">{r.key}</span>
+                    <span className={cn("font-mono text-[12.5px]", isDeleted ? "text-muted-foreground line-through decoration-destructive/70" : "text-foreground")}>{r.key}</span>
                   )}
 
-                  {isEdit ? (
+                  {isDeleted ? (
+                    <span className="text-[12.5px] text-destructive">will be deleted on save</span>
+                  ) : isEdit ? (
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 flex-1 items-center rounded-[7px] border border-info/80 bg-page px-2.5 ring-2 ring-info/10">
                         <input
@@ -289,6 +341,12 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
 
                   {isEdit ? (
                     <span />
+                  ) : isDeleted ? (
+                    <div className="flex justify-end">
+                      <button onClick={() => toggleDelete(r)} className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[12.5px] text-foreground hover:bg-surface-3">
+                        <Undo2 className="size-3.5" /> Undo
+                      </button>
+                    </div>
                   ) : (
                     <div className="flex items-center justify-between">
                       <span className="text-[12.5px] text-muted-foreground">{r.updated}</span>
@@ -307,8 +365,21 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
                             </button>
                           </span>
                         )}
+                        {r.inherited ? (
+                          <span title="Inherited — delete it in its source, or override it here" className="rounded p-1 text-subtle/40 opacity-0 group-hover:opacity-100">
+                            <Trash2 className="size-3.5" />
+                          </span>
+                        ) : (
+                          <button
+                            aria-label={`Delete ${r.key}`}
+                            onClick={() => toggleDelete(r)}
+                            className="rounded p-1 text-subtle opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        )}
                         {r.action === "Rotate" && !isStaged ? (
-                          <button onClick={() => rotate(r)} className="rounded px-1.5 py-0.5 text-[12.5px] text-foreground hover:bg-surface-3">
+                          <button onClick={() => setRotateOpen(true)} className="rounded px-1.5 py-0.5 text-[12.5px] text-foreground hover:bg-surface-3">
                             Rotate
                           </button>
                         ) : (
@@ -368,7 +439,7 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
               staged change{nStaged > 1 ? "s" : ""} on <b className={env === "prod" ? "text-warning" : ""}>{env}</b>
             </span>
             <span className="flex gap-2">
-              <Btn size="sm" variant="ghost" onClick={() => setStaged({})}>
+              <Btn size="sm" variant="ghost" onClick={discardAll}>
                 Discard
               </Btn>
               <Btn size="sm" variant="primary" onClick={() => (env === "prod" ? setConfirm(true) : save())}>
@@ -392,7 +463,18 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
                 <span className="text-subtle">v{14 + Object.keys(staged).indexOf(k)} → new</span>
               </div>
             ))}
+            {[...deleted].map((k) => (
+              <div key={k} className="flex justify-between">
+                <span className="text-destructive">- {k}</span>
+                <span className="text-subtle">deleted · versions kept 30d</span>
+              </div>
+            ))}
           </div>
+          {deleted.size > 0 && (
+            <div className="flex items-start gap-2 text-[12.5px] text-destructive">
+              <TriangleAlert className="mt-0.5 size-3.5 shrink-0" /> order-service fails to start if it still reads {[...deleted].join(", ")}. Check the code first.
+            </div>
+          )}
           <div className="flex items-center gap-2 text-[12.5px] text-warning">
             <TriangleAlert className="size-3.5" /> Blast radius: order-service · prod · 3 pods
           </div>
@@ -430,6 +512,44 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
         </div>
       </Modal>
 
+      <RotateSecretIdModal open={rotateOpen} project={project} env={env} onClose={() => setRotateOpen(false)} onRotated={onRotated} />
+      <CreateBranchModal
+        open={branchNew}
+        taken={["dev", "qa", "prod", ...branches.map((b) => b.name)]}
+        counts={envCounts}
+        defaultFrom={branch ? branch.from : (env as Branch["from"])}
+        onClose={() => setBranchNew(false)}
+        onCreate={(b) => {
+          setBranches((bs) => [...bs, b])
+          setBranchNew(false)
+          setEnv(b.name)
+          logEntry({ when: nowHHMM(), who: "Alex", kind: "change", verb: "created branch", key: b.name, rest: ` · from ${b.from}` })
+          toast.success(`Branch ${b.name} created from ${b.from}`, { description: `${envCounts[b.from]} keys inherited · 0 overrides` })
+        }}
+      />
+      <DeleteBranchModal
+        branch={branchDel}
+        onClose={() => setBranchDel(null)}
+        onDelete={(b) => {
+          setBranches((bs) => bs.filter((x) => x.name !== b.name))
+          setBranchDel(null)
+          setEnv(b.from)
+          logEntry({ when: nowHHMM(), who: "Alex", kind: "change", verb: "deleted branch", key: b.name, rest: "" })
+          toast(`Branch ${b.name} deleted`)
+        }}
+      />
+      <InheritanceModal
+        open={inheritOpen}
+        env={env}
+        own={rows.filter((r) => !r.inherited).map((r) => r.key)}
+        current={parents}
+        onClose={() => setInheritOpen(false)}
+        onSave={(next) => {
+          setParents(next)
+          setInheritOpen(false)
+          toast.success(`Inheritance updated on ${env}`, { description: env === "prod" ? "3 pods restart to pick it up" : "pods restart once" })
+        }}
+      />
       <VersionsDrawer open={panel === "versions"} keyName={versionsKey} onClose={() => router.replace(base, { scroll: false })} />
       <TokensDrawer open={panel === "tokens"} onClose={() => router.replace(base, { scroll: false })} />
     </Frame>
