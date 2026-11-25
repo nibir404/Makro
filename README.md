@@ -6,7 +6,7 @@
 
 **One place to run your services.** Deploy, request resources and approve changes across dev, qa and prod.
 
-`v0.3.0` · prototype with dummy data · Next.js 16 · Tailwind v4 · shadcn/ui
+`v0.4.0` · prototype with dummy data · Next.js 16 · Tailwind v4 · shadcn/ui
 
 </div>
 
@@ -90,6 +90,8 @@ On the service canvas: `C` create · `⌘↵` review staged changes · `↑ ↓`
 ## Status
 
 `0.x` is a prototype: the UI and flows are complete for review, and the data is mocked. API integration comes in later minor versions. See [CHANGELOG.md](CHANGELOG.md).
+
+**0.4.0** replaces the last placeholder actions with real screens: import a Pulumi stack, build log viewer, generated-code viewer, Activity filters and a product tour.
 
 **0.3.0** adds a canvas view to every platform module (Postgres, Infrastructure, Projects, Secrets, Kafka, Network) behind a shared Canvas / List switch.
 

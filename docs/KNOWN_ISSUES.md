@@ -1,4 +1,4 @@
-# Known issues and open work (v0.3.0)
+# Known issues and open work (v0.4.0)
 
 ## Design fidelity
 - **Not compared visually:** some screens were not checked against their Paper frame in a browser and may differ in detail:
@@ -16,7 +16,7 @@
 
 ## Behaviour
 - **Dummy data:** all data is mock data. Actions change local state only.
-- **Partial actions:** a few actions only show a toast, such as "View logs", "View code" and "Group by".
+- **External links:** a few actions point outside the IDP and only show a toast in the prototype, such as "Opening Datadog dashboard".
 - **Undo out of sync:** undoing a removed change in add-resource review doesn't decrement the canvas staged count until the next stage.
 
 - **Module canvases are Canvas-mode only:** Classic mode keeps the list views for Postgres, Infrastructure, Projects, Secrets and Kafka.

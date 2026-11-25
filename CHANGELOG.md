@@ -5,6 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-25
+
+The last placeholder screens: import stack, build logs, generated code, activity filters and a product tour.
+
+### Added
+- **Import stack** on an empty service canvas: pick a Pulumi stack, choose its resources, import them as draft nodes (staged for review).
+- **Build log viewer** for a failed new-service build: streams in, error and warning highlighting, search, errors-only, follow, jump to error, copy and download.
+- **Code viewer** for Infrastructure requests: the generated Pulumi `index.ts` and stack config, built from the resources you picked.
+- **Activity filters**: Module / Actor / Status on the audit log and Type / Actor on the Classic feed, as multi-select menus with counts.
+- **Product tour** from the new-user home: five steps spotlighting the mode switch, Services, Inbox, Platform and ⌘K, in both layouts.
+- Shared viewers in `components/idp/viewers.tsx` (`LogViewer`, `CodeViewer`, `FilterMenu`, `TourHost` / `startTour`).
+
+### Fixed
+- **Manage** members in the Network-access inspector opens Groups & members with the group selected; **Rotate** in the Secrets inspector opens the rotate-SecretID dialog. Both were toast-only.
+
 ## [0.3.0] - 2026-11-25
 
 Canvas views for every platform module.
@@ -81,7 +96,8 @@ First prototype of the IDP v2 redesign, built from the Paper file "IDP V.2" (pag
 - Dummy data fixtures in `src/lib/data.ts` and `src/lib/data-ext/`.
 - Documentation: README, routes index, architecture, design-implementation brief, contributing and versioning guide, known issues.
 
-[Unreleased]: https://github.com/nibir404/Makro/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/nibir404/Makro/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/nibir404/Makro/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nibir404/Makro/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nibir404/Makro/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/nibir404/Makro/releases/tag/v0.1.0
