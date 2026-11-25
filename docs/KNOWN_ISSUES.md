@@ -1,4 +1,4 @@
-# Known issues and open work (v0.2.0)
+# Known issues and open work (v0.3.0)
 
 ## Design fidelity
 - **Not compared visually:** some screens were not checked against their Paper frame in a browser and may differ in detail:
@@ -19,6 +19,8 @@
 - **Partial actions:** a few actions only show a toast, such as "View logs", "View code" and "Group by".
 - **Undo out of sync:** undoing a removed change in add-resource review doesn't decrement the canvas staged count until the next stage.
 
+- **Module canvases are Canvas-mode only:** Classic mode keeps the list views for Postgres, Infrastructure, Projects, Secrets and Kafka.
+- **Module canvas data:** producer/consumer links (Kafka), stack resources (Infrastructure), services outside commerce (Projects) and secret inheritance are illustrative fixtures in `screens/platform-canvas.tsx`.
 - **Canvas drafts don't persist:** resources created on the canvas live in memory; a full reload drops them from the canvas (they stay in the review change set).
 
 ## Code quality

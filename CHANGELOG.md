@@ -5,6 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-25
+
+Canvas views for every platform module.
+
+### Added
+- **Canvas view for every platform module** in Canvas mode, behind a shared **Canvas / List** switch in each module header:
+  - Postgres: projects → databases → users → services, with failing health checks and overdue passwords highlighted.
+  - Infrastructure: projects → Pulumi stacks → key resources, with drift and errors; a stack opens its stack graph.
+  - Projects: projects → services → shared platform (Kafka, Postgres, Vault, Pulumi).
+  - Secrets: shared parents → projects → dev/qa/prod configs, with inheritance drawn as dashed lines.
+  - Kafka: producers → topics → consumer groups, with live traffic, lag and failing ACLs.
+  - Network access: the switch opens the existing access map.
+- Shared graph engine (`components/idp/graph-canvas.tsx`) used by all module canvases: pan/zoom at cursor, fit, drag with saved layout, hover highlights neighbours, search, minimap, legend.
+- The list stays the default (as designed in Paper); each module remembers the last view you picked.
+
 ## [0.2.0] - 2026-11-25
 
 Interaction pass on the service canvas, the missing screens from the gap audit against Paper and the old IDP, and a clean lint.
@@ -66,6 +81,7 @@ First prototype of the IDP v2 redesign, built from the Paper file "IDP V.2" (pag
 - Dummy data fixtures in `src/lib/data.ts` and `src/lib/data-ext/`.
 - Documentation: README, routes index, architecture, design-implementation brief, contributing and versioning guide, known issues.
 
-[Unreleased]: https://github.com/nibir404/Makro/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/nibir404/Makro/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/nibir404/Makro/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nibir404/Makro/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/nibir404/Makro/releases/tag/v0.1.0
