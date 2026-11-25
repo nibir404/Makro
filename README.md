@@ -6,7 +6,7 @@
 
 **One place to run your services.** Deploy, request resources and approve changes across dev, qa and prod.
 
-`v0.1.0` · prototype with dummy data · Next.js 16 · Tailwind v4 · shadcn/ui
+`v0.2.0` · prototype with dummy data · Next.js 16 · Tailwind v4 · shadcn/ui
 
 </div>
 
@@ -63,10 +63,32 @@ Requires Node 20+.
 - **motion** for animation, **@xyflow/react** for the canvas graphs, **sonner** for toasts, **next-themes** for theming
 - **lucide-react** icons and the official integration marks (Argo CD, Kubernetes, GitLab, Vault, Kafka, Postgres, NetBird, Pulumi, Datadog, Okta)
 
+## How it fits together
+
+```mermaid
+flowchart LR
+  U([Developer]) --> S[Service canvas]
+  S -- "C · Create" --> D[Draft resource]
+  S -- "right-click · Remove" --> R[Staged removal]
+  D --> CS[Change set]
+  R --> CS
+  CS -- "⌘↵ · Review & submit" --> IB[Inbox review]
+  IB -- approve --> AP[Applying]
+  IB -- reject --> RJ[Rejected]
+  AP --> V[Verifying] --> L[Live]
+  AP --> F[Failed] -- retry --> AP
+```
+
+Every change, whether a new topic, a removed grant or a rotated secret, goes through the same lifecycle: **Draft → In review → Approved → Applying → Verifying → Live / Failed / Rejected**.
+
 ## Keyboard
 
-`⌘K` command palette · `N` new request · `J`/`K` move · `A` approve · `R` reject/review · `Esc` close panels · `=` `-` `0` zoom the canvas.
+`⌘K` command palette · `N` new request · `J`/`K` move · `A` approve · `R` reject/review · `Esc` close panels.
+
+On the service canvas: `C` create · `⌘↵` review staged changes · `↑ ↓` / `J K` next resource · `/` find · `F` fit · `=` `-` `0` zoom · `?` all shortcuts.
 
 ## Status
 
 `0.x` is a prototype: the UI and flows are complete for review, and the data is mocked. API integration comes in later minor versions. See [CHANGELOG.md](CHANGELOG.md).
+
+**0.2.0** adds an interactive service canvas (create on canvas, staged removal, live edges, minimap, search), a dot-matrix working indicator for long operations, Kafka ACL replace and bulk apply, the missing Vault actions (delete key, rotate SecretID, branches, inheritance) and a clean lint.
