@@ -11,7 +11,7 @@ import "@xyflow/react/dist/style.css"
 import { cn } from "@/lib/utils"
 import { useHref, useMode } from "@/lib/mode"
 import { CodeViewer, type CodeFile } from "@/components/idp/viewers"
-import { InfraCanvas, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
+import { InfraCanvas, ClassicSwitch, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
 import { Btn, EnvChip, FadeIn, IntegrationLogo, Stagger, StaggerItem, StatusDot, StatusPill, ease, useHotkey } from "@/components/idp/kit"
 import {
   getStack,
@@ -52,8 +52,8 @@ function useQ() {
 export function InfraHome() {
   const mode = useMode()
   const [mv, setMv] = useModuleView("infra")
-  if (mode === "classic") return <ClassicInfra />
   if (mv === "canvas") return <InfraCanvas onView={setMv} />
+  if (mode === "classic") return <ClassicInfra />
   return <CanvasInfra />
 }
 function CanvasInfra() {
@@ -302,6 +302,7 @@ export function ClassicInfra() {
           </p>
         </div>
         <div className="flex gap-2">
+          <ClassicSwitch module="infra" />
           <Btn href={href("/infra/stacks/commerce-order-service?view=graph")}><Waypoints /> Stack graph</Btn>
           <Btn variant="primary" href={href("/infra/new")}><Plus /> New request</Btn>
         </div>
@@ -640,7 +641,8 @@ function StackGraphPage({ name }: { name: string }) {
           nodeTypes={rTypes}
           onNodeClick={(_, n) => setSel(n.id)}
           onPaneClick={() => setSel(null)}
-          defaultViewport={{ x: 0, y: -56, zoom: 1 }}
+          fitView
+          fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
           proOptions={{ hideAttribution: true }}
           nodesConnectable={false}
         >

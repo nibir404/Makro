@@ -10,7 +10,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { motion } from "motion/react"
 import { Boxes, FolderGit2, KeyRound, Layers, List as ListIcon, User, Workflow } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useHref } from "@/lib/mode"
+import { useHref, useMode } from "@/lib/mode"
+import { ClassicPage } from "@/components/shell/classic-page"
 import { secretProjects, type Health } from "@/lib/data"
 import { PW_MAX, TOPIC_HEALTH, pgBindings, pgDbUsers, pgDbs, topics } from "@/lib/data-ext/kafka-postgres"
 import { infraStacks, projectCards, projectServices } from "@/lib/data-ext/infra-projects"
@@ -107,6 +108,24 @@ export function ViewSwitch({
       })}
     </div>
   )
+}
+
+/** Switch for a Classic list header: wires itself to the module's view state. */
+export function ClassicSwitch({ module }: { module: string }) {
+  const [view, set] = useModuleView(module)
+  return <ViewSwitch view={view} onChange={set} module={`${module}-classic`} className="h-9" />
+}
+
+/** In Classic mode the canvas sits under the Classic top bar; in Canvas mode it fills the page. */
+function CanvasFrame({ title, children }: { title: string; children: React.ReactNode }) {
+  const mode = useMode()
+  if (mode === "classic")
+    return (
+      <ClassicPage bare crumbs={<span className="text-[15px] font-semibold text-foreground">{title}</span>}>
+        {children}
+      </ClassicPage>
+    )
+  return <>{children}</>
 }
 
 function CanvasHeader({ logo, icon, title, sub, right }: { logo?: Parameters<typeof IntegrationLogo>[0]["name"]; icon?: React.ReactNode; title: string; sub: React.ReactNode; right?: React.ReactNode }) {
@@ -222,6 +241,7 @@ export function PostgresCanvas({ onView }: { onView: (v: ModuleView) => void }) 
   }, [href, router])
 
   return (
+    <CanvasFrame title="Postgres">
     <GraphCanvas
       id="postgres"
       nodes={nodes}
@@ -237,6 +257,7 @@ export function PostgresCanvas({ onView }: { onView: (v: ModuleView) => void }) 
         </div>
       }
     />
+    </CanvasFrame>
   )
 }
 
@@ -331,6 +352,7 @@ export function InfraCanvas({ onView }: { onView: (v: ModuleView) => void }) {
   }, [href, router])
 
   return (
+    <CanvasFrame title="Infrastructure">
     <GraphCanvas
       id="infra"
       nodes={nodes}
@@ -345,6 +367,7 @@ export function InfraCanvas({ onView }: { onView: (v: ModuleView) => void }) {
         </div>
       }
     />
+    </CanvasFrame>
   )
 }
 
@@ -433,6 +456,7 @@ export function ProjectsCanvas({ onView }: { onView: (v: ModuleView) => void }) 
   }, [href, router])
 
   return (
+    <CanvasFrame title="Projects">
     <GraphCanvas
       id="projects"
       nodes={nodes}
@@ -448,6 +472,7 @@ export function ProjectsCanvas({ onView }: { onView: (v: ModuleView) => void }) 
         </div>
       }
     />
+    </CanvasFrame>
   )
 }
 
@@ -529,6 +554,7 @@ export function SecretsCanvas({ onView }: { onView: (v: ModuleView) => void }) {
   }, [href, router])
 
   return (
+    <CanvasFrame title="Secrets">
     <GraphCanvas
       id="secrets"
       nodes={nodes}
@@ -544,6 +570,7 @@ export function SecretsCanvas({ onView }: { onView: (v: ModuleView) => void }) {
         </div>
       }
     />
+    </CanvasFrame>
   )
 }
 
@@ -627,6 +654,7 @@ export function KafkaCanvas({ onView }: { onView: (v: ModuleView) => void }) {
   }, [href, router])
 
   return (
+    <CanvasFrame title="Kafka">
     <GraphCanvas
       id="kafka"
       nodes={nodes}
@@ -642,5 +670,6 @@ export function KafkaCanvas({ onView }: { onView: (v: ModuleView) => void }) {
         </div>
       }
     />
+    </CanvasFrame>
   )
 }

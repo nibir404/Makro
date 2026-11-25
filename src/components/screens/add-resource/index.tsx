@@ -321,8 +321,11 @@ function YamlPreview({ lines }: { lines: string[] }) {
 
 /* ---------- Postgres ---------- */
 function PostgresForm({ svc, tried, bind }: FormProps) {
-  const [db, setDb] = React.useState(pgTargets[0].id)
-  const [role, setRole] = React.useState("svc_order_service_ro")
+  // Opened from a database ("Connect a service"): that database is preselected.
+  const fromDb = useSearchParams().get("db")
+  const targets = fromDb && !pgTargets.some((p) => p.id === fromDb) ? [{ id: fromDb, note: "picked in Postgres" }, ...pgTargets] : pgTargets
+  const [db, setDb] = React.useState(fromDb ?? pgTargets[0].id)
+  const [role, setRole] = React.useState(`svc_${(svc ?? "order-service").replace(/-/g, "_")}_ro`)
   const [access, setAccess] = React.useState<"ro" | "rw" | "owner">("ro")
   const norm = role.startsWith("svc_") ? role : `svc_${role}`
   const err = !role
@@ -357,14 +360,14 @@ function PostgresForm({ svc, tried, bind }: FormProps) {
         <div className="relative">
           <IntegrationLogo name="postgres" className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
           <select value={db} onChange={(e) => setDb(e.target.value)} className={cn(inputCls, "appearance-none border-line-3 pl-8")}>
-            {pgTargets.map((p) => (
+            {targets.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.id}
               </option>
             ))}
           </select>
           <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-subtle">
-            {pgTargets.find((p) => p.id === db)?.note} ⌄
+            {targets.find((p) => p.id === db)?.note} ⌄
           </span>
         </div>
       </div>

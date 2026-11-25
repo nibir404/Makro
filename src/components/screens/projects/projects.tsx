@@ -11,7 +11,7 @@ import "@xyflow/react/dist/style.css"
 import { cn } from "@/lib/utils"
 import type { Logo } from "@/lib/data"
 import { useHref, useMode } from "@/lib/mode"
-import { ProjectsCanvas, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
+import { ProjectsCanvas, ClassicSwitch, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
 import { Btn, FadeIn, IntegrationLogo, Stagger, StaggerItem, StatusDot, ease, useHotkey } from "@/components/idp/kit"
 import { getProject, projectCards, projectServices, switcherItems } from "@/lib/data-ext/infra-projects"
 import { Card, CountUp, Crumbs, Field, Modal, Screen, Seg, TH, inputCls } from "../infra/ui"
@@ -113,7 +113,10 @@ function ClassicProjects({ sw, setSw }: { sw: boolean; setSw: (v: boolean) => vo
           <h1 className="text-[24px] font-semibold tracking-[-0.01em]">Projects</h1>
           <p className="text-[13px] text-muted-foreground">5 projects you belong to</p>
         </div>
-        <Btn variant="primary" href={href("/projects/new")}><Plus /> New project</Btn>
+        <div className="flex gap-2">
+          <ClassicSwitch module="projects" />
+          <Btn variant="primary" href={href("/projects/new")}><Plus /> New project</Btn>
+        </div>
       </FadeIn>
       <div className="flex h-[34px] w-80 items-center gap-2 rounded-[8px] border border-line-3 bg-surface px-3">
         <Search className="size-3.5 text-subtle" />
@@ -156,8 +159,8 @@ export function ProjectsList() {
   useHotkey("n", () => router.push(href("/projects/new")))
   const list = projectCards.filter((p) => p.name.includes(q.toLowerCase()))
   const [mv, setMv] = useModuleView("projects")
-  if (mode === "classic") return <ClassicProjects sw={sw} setSw={setSw} />
   if (mv === "canvas") return <ProjectsCanvas onView={setMv} />
+  if (mode === "classic") return <ClassicProjects sw={sw} setSw={setSw} />
   return (
     <Screen crumbs={<Crumbs items={[{ label: "Projects" }]} />}>
       <ProjectSwitcher open={sw} onClose={() => setSw(false)} />
@@ -450,7 +453,11 @@ function GNode({ data }: { data: GData }) {
     </div>
   )
 }
-export const gTypes = { g: GNode } as unknown as NodeTypes
+/** Column heading drawn inside the graph, so it stays aligned at any zoom or layout width. */
+function LabelNode({ data }: { data: { label: string } }) {
+  return <span className="pointer-events-none text-[11px] tracking-[0.1em] whitespace-nowrap text-subtle uppercase">{data.label}</span>
+}
+export const gTypes = { g: GNode, lbl: LabelNode } as unknown as NodeTypes
 
 function ProjectCanvasPage({ p, onList }: { p: ReturnType<typeof getProject>; onList: () => void }) {
   const href = useHref()
@@ -469,6 +476,11 @@ function ProjectCanvasPage({ p, onList }: { p: ReturnType<typeof getProject>; on
     N("nb", 556, 666, { kind: "res", label: "warehouse-api access", logo: "netbird" }),
     ...(shared ? [] : [N("cache", 556, 760, { kind: "res", label: "redis-orders", sub: "used by 1 service" })]),
     N("stack", 936, 386, { kind: "infra", label: "commerce/order-svc", sub: "drifted · 2 resources", subCls: "text-warning", logo: "pulumi", mono: true, drift: true }),
+    ...[
+      ["l-svc", 116, "Services"],
+      ["l-res", 556, "Shared resources"],
+      ["l-inf", 936, "Infra"],
+    ].map(([id, x, label]) => ({ id: id as string, position: { x: x as number, y: 96 }, data: { label }, type: "lbl", draggable: false, selectable: false })),
   ]
   const E = (s: string, t: string, broken?: boolean): Edge => ({
     id: s + t,
@@ -489,15 +501,13 @@ function ProjectCanvasPage({ p, onList }: { p: ReturnType<typeof getProject>; on
           nodeTypes={gTypes}
           onNodeClick={(_, n) => setSel(n.id)}
           onNodeDoubleClick={(_, n) => n.id === "stack" && router.push(href("/infra/stacks/commerce-order-service?view=graph"))}
-          defaultViewport={{ x: 24, y: 0, zoom: 1 }}
+          fitView
+          fitViewOptions={{ padding: 0.12, maxZoom: 1 }}
           proOptions={{ hideAttribution: true }}
           nodesConnectable={false}
         >
           <Background gap={20} size={1} color="transparent" />
         </ReactFlow>
-        <div className="pointer-events-none absolute inset-x-6 top-[118px] grid grid-cols-[556px_380px_1fr] text-[11px] tracking-[0.1em] text-subtle uppercase">
-          <span>Services</span><span>Shared resources</span><span>Infra</span>
-        </div>
         <div className="absolute inset-x-6 top-6 flex items-center gap-3">
           <Seg id="pcv" value="canvas" onChange={(v) => v === "list" && onList()} options={[{ value: "canvas", label: "Canvas" }, { value: "list", label: "List" }]} />
           <Letter l={p.letter} className="size-6.5 text-[12px]" />

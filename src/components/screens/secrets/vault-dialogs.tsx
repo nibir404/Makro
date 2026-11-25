@@ -460,3 +460,135 @@ function InheritanceBody({ env, own, current, onClose, onSave }: { env: string; 
     </>
   )
 }
+
+/* ------------------------------------------------------------------ */
+/* New Vault project (old 05b, redesigned: one sheet, sensible defaults) */
+/* ------------------------------------------------------------------ */
+
+const NAMESPACES = ["commerce", "pricing", "inventory", "payments", "platform"] as const
+const ENVS = ["dev", "qa", "prod"] as const
+
+export function NewVaultProjectModal({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (p: { ns: string; name: string; envs: string[]; inherit: string[] }) => void }) {
+  return (
+    <Modal open={open} onClose={onClose} className="w-[540px]">
+      {open && <NewVaultProjectBody onClose={onClose} onCreate={onCreate} />}
+    </Modal>
+  )
+}
+
+function NewVaultProjectBody({ onClose, onCreate }: { onClose: () => void; onCreate: (p: { ns: string; name: string; envs: string[]; inherit: string[] }) => void }) {
+  const [ns, setNs] = React.useState<string>("commerce")
+  const [name, setName] = React.useState("")
+  const [envs, setEnvs] = React.useState<string[]>([...ENVS])
+  const [inherit, setInherit] = React.useState<string[]>(["shared/commerce"])
+  const [tried, setTried] = React.useState(false)
+  const taken = ["order-service", "cart-api", "price-api", "stock-sync", "gateway"]
+  const err = !name
+    ? "Give it a name, usually the service it holds secrets for"
+    : !/^[a-z][a-z0-9-]{1,40}$/.test(name)
+      ? "Lowercase letters, digits and dashes"
+      : taken.includes(name)
+        ? `${name} already exists in ${ns}`
+        : !envs.length
+          ? "Pick at least one environment"
+          : null
+  const parents = [`shared/${ns}`, "platform/observability", "platform/auth"]
+  const pickNs = (n: string) => {
+    setNs(n)
+    setInherit((cur) => [`shared/${n}`, ...cur.filter((p) => !p.startsWith("shared/"))])
+  }
+  const toggle = (list: string[], v: string, set: (x: string[]) => void) => set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        setTried(true)
+        if (!err) onCreate({ ns, name, envs, inherit })
+      }}
+    >
+      <div className="flex flex-col gap-4 p-5.5">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">New Vault project</h2>
+          <p className="mt-1 text-sm text-muted-foreground">For secrets that don&apos;t belong to one service. Services get their own project automatically when they&apos;re created.</p>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted-foreground">Namespace</span>
+          <div className="flex flex-wrap gap-1.5">
+            {NAMESPACES.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => pickNs(n)}
+                className={cn("h-8 rounded-[8px] border px-3 text-[13px] transition-colors", ns === n ? "border-foreground/60 bg-surface-3 text-foreground" : "border-line-3 text-muted-foreground hover:text-foreground")}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted-foreground">Name</span>
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, "-"))}
+            placeholder="checkout-bff"
+            className={cn(inputCls, tried && err && "border-destructive/60")}
+          />
+          <span className="flex items-center justify-between text-[11.5px]">
+            <span className="font-mono text-subtle">
+              secret/{ns}/<span className="text-foreground">{name || "…"}</span>
+            </span>
+            {tried && err && <span className="text-destructive">{err}</span>}
+          </span>
+        </label>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted-foreground">Environments · one config each</span>
+          <div className="flex gap-1.5">
+            {ENVS.map((e) => (
+              <Chip key={e} on={envs.includes(e)} onClick={() => toggle(envs, e, setEnvs)}>
+                {e}
+              </Chip>
+            ))}
+          </div>
+          <span className="text-[11.5px] text-subtle">Need something like dev-perf or a tenant config? Add it later as a branch of an environment.</span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted-foreground">Inherit shared keys from</span>
+          <div className="flex flex-wrap gap-1.5">
+            {parents.map((p) => (
+              <Chip key={p} mono on={inherit.includes(p)} onClick={() => toggle(inherit, p, setInherit)}>
+                {p}
+              </Chip>
+            ))}
+          </div>
+        </div>
+      </div>
+      <Foot>
+        <Btn type="button" variant="secondary" onClick={onClose}>
+          Cancel
+        </Btn>
+        <Btn type="submit" variant="primary" disabled={tried && !!err}>
+          Create project
+        </Btn>
+      </Foot>
+    </form>
+  )
+}
+
+function Chip({ on, onClick, mono, children }: { on: boolean; onClick: () => void; mono?: boolean; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex h-8 items-center gap-1.5 rounded-[8px] border px-2.5 text-[12.5px] transition-colors",
+        mono && "font-mono text-[12px]",
+        on ? "border-primary/50 bg-primary/10 text-foreground" : "border-line-3 text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <span className={cn("grid size-3.5 place-items-center rounded-[3px] border", on ? "border-primary bg-primary text-primary-foreground" : "border-line-3")}>{on && <Check className="size-2.5" strokeWidth={3} />}</span>
+      {children}
+    </button>
+  )
+}

@@ -5,13 +5,14 @@ import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { AnimatePresence, motion } from "motion/react"
 import { toast } from "sonner"
-import { Boxes, Check, Copy, Eye, EyeOff, GitBranch, KeyRound, Layers, Loader2, MoreHorizontal, Plus, Trash2, TriangleAlert, Undo2 } from "lucide-react"
+import { Boxes, Check, Copy, Eye, EyeOff, GitBranch, KeyRound, Layers, Loader2, MoreHorizontal, Pencil, Plus, Trash2, TriangleAlert, Undo2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useHref } from "@/lib/mode"
 import { envCounts, secretRows, secretVersions, serviceTokens, type SecretRow } from "@/lib/data-ext/network-secrets"
 import { Btn, StatusDot, ease, useHotkey } from "@/components/idp/kit"
 import { Crumbs, Drawer, Frame, Modal, Segmented, VaultMark } from "../network/ui"
 import { logEntry, nowHHMM } from "./store"
+import { TypeToConfirm } from "../projects/projects"
 import { CreateBranchModal, DeleteBranchModal, InheritanceModal, RotateSecretIdModal, type Branch } from "./vault-dialogs"
 
 export function useProject() {
@@ -48,8 +49,11 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
   const [branchNew, setBranchNew] = React.useState(sp.get("branch") === "new")
   const [branchDel, setBranchDel] = React.useState<Branch | null>(null)
   const [inheritOpen, setInheritOpen] = React.useState(sp.get("inherit") === "1")
+  const [descEdit, setDescEdit] = React.useState(false)
   const [parents, setParents] = React.useState(["shared/commerce", "platform/observability", "platform/auth"])
-  const [rows, setRows] = React.useState<SecretRow[]>(secretRows)
+  // A just-created project starts with only what it inherits.
+  const isNew = sp.get("new") === "1"
+  const [rows, setRows] = React.useState<SecretRow[]>(() => (isNew ? secretRows.filter((r) => r.inherited) : secretRows))
   const [staged, setStaged] = React.useState<Record<string, string>>({})
   const [added, setAdded] = React.useState<string[]>([])
   const [editing, setEditing] = React.useState<string | null>(sp.get("edit") === "none" ? null : "STRIPE_WEBHOOK_SECRET")
@@ -190,6 +194,7 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
             <p className="text-sm text-muted-foreground">
               secret/commerce/{project} · {rows.length} keys
             </p>
+            <InlineDescription key={project} editing={descEdit} onEditing={setDescEdit} initial={project === "order-service" ? "Order placement, checkout and fulfilment" : ""} />
           </div>
         </div>
         <div className="flex gap-2">
@@ -205,6 +210,7 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
           <Btn variant="secondary" onClick={addKey}>
             <Plus /> Add key
           </Btn>
+          <ProjectMenu project={project} keys={rows.length} onEdit={() => setDescEdit(true)} tokensHref={`${base}/tokens`} />
         </div>
       </div>
 
@@ -213,7 +219,7 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
           {(["dev", "qa", "prod", ...branches.map((b) => b.name)] as string[]).map((e) => (
             <button key={e} onClick={() => setEnv(e)} className={cn("relative flex items-center gap-1.5 px-3 pb-2.5 text-sm", env === e ? "text-foreground" : "text-muted-foreground hover:text-foreground")}>
               {branches.some((b) => b.name === e) && <GitBranch className="size-3.5" />}
-              {e} · {counts[e]}
+              {e} · {isNew ? rows.length : counts[e]}
               {env === e && <motion.span layoutId="env-tab" transition={{ duration: 0.3, ease }} className="absolute right-0 bottom-[-1px] left-0 h-0.5 bg-foreground" />}
             </button>
           ))}
@@ -241,6 +247,27 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
           <Link href={`${base}/tokens`} className="hover:text-foreground">Service tokens</Link>
         </div>
       </div>
+
+      {!rows.some((r) => !r.inherited) && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 flex items-center justify-between rounded-[14px] border border-dashed border-primary/40 bg-primary/5 px-5 py-4"
+        >
+          <div>
+            <div className="text-[14px] font-medium text-foreground">No keys of its own yet</div>
+            <div className="text-[13px] text-muted-foreground">It already inherits {rows.length} shared keys. Add the ones only {project} needs.</div>
+          </div>
+          <div className="flex gap-2">
+            <Btn variant="secondary" href={`${base}/upload`}>
+              Upload .env
+            </Btn>
+            <Btn variant="primary" onClick={addKey}>
+              <Plus /> Add first key
+            </Btn>
+          </div>
+        </motion.div>
+      )}
 
       <div className="mt-4 overflow-hidden rounded-[14px] border border-line-2 bg-surface">
         <div className="grid h-9 grid-cols-[260px_1fr_220px] items-center border-b border-line px-4">
@@ -418,9 +445,11 @@ export function SecretsEditor({ panel }: { panel?: "versions" | "tokens" }) {
             )
           })}
         </AnimatePresence>
-        <button onClick={() => setExpanded((e) => !e)} className="flex h-10 w-full items-center px-4 font-mono text-[12px] text-subtle hover:text-foreground">
-          {expanded ? "− show fewer" : `+ ${rows.length - 5 - added.length} more keys`}
-        </button>
+        {rows.length > 5 + added.length && (
+          <button onClick={() => setExpanded((e) => !e)} className="flex h-10 w-full items-center px-4 font-mono text-[12px] text-subtle hover:text-foreground">
+            {expanded ? "− show fewer" : `+ ${rows.length - 5 - added.length} more keys`}
+          </button>
+        )}
       </div>
       <p className="mt-6 text-[13px] text-subtle">Click any value to edit in place. Revealing a value is logged.</p>
 
@@ -777,5 +806,128 @@ function TokensDrawer({ open, onClose }: { open: boolean; onClose: () => void })
         )}
       </AnimatePresence>
     </Drawer>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Project details: inline description (old 05e) + ⋯ menu (05d) + delete (05g) */
+/* ------------------------------------------------------------------ */
+
+function InlineDescription({ initial, editing, onEditing }: { initial: string; editing: boolean; onEditing: (v: boolean) => void }) {
+  const [desc, setDesc] = React.useState(initial)
+  const [draft, setDraft] = React.useState(initial)
+  const save = () => {
+    onEditing(false)
+    if (draft.trim() === desc) return
+    const prev = desc
+    setDesc(draft.trim())
+    toast.success("Description saved", { action: { label: "Undo", onClick: () => (setDesc(prev), setDraft(prev)) } })
+  }
+  if (editing)
+    return (
+      <input
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save()
+          if (e.key === "Escape") {
+            setDraft(desc)
+            onEditing(false)
+          }
+        }}
+        placeholder="What these secrets are for"
+        className="mt-1 h-7 w-[420px] rounded-[6px] border border-info/70 bg-page px-2 text-[13px] text-foreground outline-none"
+      />
+    )
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setDraft(desc)
+        onEditing(true)
+      }}
+      title="Click to edit"
+      className={cn("mt-1 -ml-1 rounded-[6px] px-1 text-left text-[13px] hover:bg-surface-2", desc ? "text-muted-foreground" : "text-subtle italic")}
+    >
+      {desc || "Add a description"}
+    </button>
+  )
+}
+
+function ProjectMenu({ project, keys, onEdit, tokensHref }: { project: string; keys: number; onEdit: () => void; tokensHref: string }) {
+  const href = useHref()
+  const router = useRouter()
+  const [open, setOpen] = React.useState(false)
+  const [del, setDel] = React.useState(false)
+  const ref = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    if (!open) return
+    const h = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false)
+    window.addEventListener("pointerdown", h)
+    return () => window.removeEventListener("pointerdown", h)
+  }, [open])
+  const item = "flex w-full items-center gap-2 rounded-[7px] px-2.5 py-1.5 text-left text-[13px] text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+  return (
+    <div ref={ref} className="relative">
+      <Btn variant="secondary" aria-label="Project actions" onClick={() => setOpen((o) => !o)}>
+        <MoreHorizontal />
+      </Btn>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.14 }}
+            className="absolute top-full right-0 z-40 mt-1.5 w-52 rounded-[10px] border border-line-3 bg-surface p-1 shadow-2xl"
+          >
+            <button
+              className={item}
+              onClick={() => {
+                setOpen(false)
+                onEdit()
+              }}
+            >
+              <Pencil className="size-3.5" /> Edit description
+            </button>
+            <Link href={tokensHref} className={item} onClick={() => setOpen(false)}>
+              <KeyRound className="size-3.5" /> Service tokens
+            </Link>
+            <div className="my-1 h-px bg-line-2" />
+            <button
+              className={cn(item, "text-destructive hover:bg-destructive/10 hover:text-destructive")}
+              onClick={() => {
+                setOpen(false)
+                setDel(true)
+              }}
+            >
+              <Trash2 className="size-3.5" /> Delete project…
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <TypeToConfirm
+        open={del}
+        onClose={() => setDel(false)}
+        name={project}
+        title={`Delete Vault project "${project}"?`}
+        cta="Delete project"
+        footnote="Versions are kept for 30 days, then purged"
+        body={
+          <ul>
+            <li>• {keys} keys in dev · qa · prod and every branch</li>
+            <li>• Service tokens and the AppRole SecretID stop working</li>
+            <li>• {project} reads this path today and will fail to start</li>
+            <li>• Access log history stays in Activity</li>
+          </ul>
+        }
+        onConfirm={() => {
+          toast.success(`Vault project ${project} deleted`, { description: "Restorable for 30 days from Activity" })
+          router.push(href("/secrets"))
+        }}
+      />
+    </div>
   )
 }

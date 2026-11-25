@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import { ArrowUpRight, Check, Database, History, KeyRound, Loader, Plus, RotateCw, TriangleAlert, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useHref, useMode } from "@/lib/mode"
-import { PostgresCanvas, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
+import { PostgresCanvas, ClassicSwitch, ViewSwitch, useModuleView } from "@/components/screens/platform-canvas"
 import { Btn, EnvChip, GlossCard, IntegrationLogo, ease, useHotkey } from "@/components/idp/kit"
 import { PW_MAX, c4eDbs, pgBindings, pgDbUsers, pgDbs, pgRotations, type PgDb } from "@/lib/data-ext/kafka-postgres"
 import {
@@ -335,7 +335,7 @@ export function PgOverview() {
   const [sub] = useQueryState("view")
   const [mv, setMv] = useModuleView("postgres")
   // ?view=rotations is the Rotations tab of the list, so it always shows the list.
-  if (mode === "canvas" && !tab && mv === "canvas" && sub !== "rotations") return <PostgresCanvas onView={setMv} />
+  if (!tab && mv === "canvas" && sub !== "rotations") return <PostgresCanvas onView={setMv} />
   if (mode === "canvas" && !tab) return <PgAllDatabases />
   return <PgClassicOverview />
 }
@@ -354,6 +354,7 @@ function PgClassicOverview() {
           <p className="text-[13px] text-subtle">20 databases · 64 users · 2 rotations due this week</p>
         </div>
         <div className="flex gap-2">
+          <ClassicSwitch module="postgres" />
           <Btn size="md" href={href("/postgres/databases")}>All databases</Btn>
           <Btn size="md" href={href("/secrets")}>
             <KeyRound /> Credentials
@@ -526,6 +527,7 @@ export function PgDbDetail() {
             <Btn size="sm" className="h-8.5" onClick={() => setRollback("1")}>
               <History /> Rollback
             </Btn>
+            <ConnectService db={db.name} bound={bindings.map((b) => b.service)} />
           </>
         }
       />
@@ -699,5 +701,94 @@ function RollbackDialog({ open, db, onClose }: { open: boolean; db: PgDb; onClos
         </Btn>
       </div>
     </Modal>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Connect a service to this database (old 06y, redesigned).
+   Database → Connect a service → pick a service: opens the service's Postgres-user form with this
+   database preselected, so the binding goes through the normal review flow. 3 clicks. */
+/* ------------------------------------------------------------------ */
+
+const CONNECTABLE = ["order-service", "checkout-api", "fulfilment", "reporting", "payment-service", "price-api", "stock-sync", "loyalty-gw", "cart-api"]
+
+function ConnectService({ db, bound }: { db: string; bound: string[] }) {
+  const href = useHref()
+  const router = useRouter()
+  const [open, setOpen] = React.useState(false)
+  const [q, setQ] = React.useState("")
+  const [idx, setIdx] = React.useState(0)
+  const ref = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    if (!open) return
+    const h = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false)
+    window.addEventListener("pointerdown", h)
+    return () => window.removeEventListener("pointerdown", h)
+  }, [open])
+  const list = CONNECTABLE.filter((s) => s.includes(q.toLowerCase())).sort((a, b) => Number(bound.includes(a)) - Number(bound.includes(b)))
+  const free = list.filter((s) => !bound.includes(s))
+  const go = (svc: string) => {
+    setOpen(false)
+    router.push(href(`/services/${svc}/add/postgres?db=${encodeURIComponent(db)}`))
+  }
+  return (
+    <div ref={ref} className="relative">
+      <Btn variant="primary" size="sm" className="h-8.5" onClick={() => setOpen((o) => !o)}>
+        <Plus /> Connect a service
+      </Btn>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.14 }}
+            className="absolute top-full right-0 z-40 mt-1.5 w-72 rounded-[12px] border border-line-3 bg-surface p-1.5 shadow-2xl"
+          >
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value)
+                setIdx(0)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault()
+                  setIdx((i) => Math.min(free.length - 1, i + 1))
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault()
+                  setIdx((i) => Math.max(0, i - 1))
+                }
+                if (e.key === "Enter" && free[idx]) go(free[idx])
+                if (e.key === "Escape") setOpen(false)
+              }}
+              placeholder="Which service needs this database?"
+              className="mb-1 h-8.5 w-full rounded-[8px] border border-line-3 bg-page px-2.5 text-[13px] text-foreground outline-none focus:border-foreground/40"
+            />
+            {list.map((s) => {
+              const isBound = bound.includes(s)
+              const on = !isBound && free[idx] === s
+              return (
+                <button
+                  key={s}
+                  disabled={isBound}
+                  onMouseMove={() => !isBound && setIdx(free.indexOf(s))}
+                  onClick={() => go(s)}
+                  className={cn("flex w-full items-center gap-2 rounded-[8px] px-2.5 py-1.5 text-left text-[13px]", on ? "bg-surface-2 text-foreground" : "text-muted-foreground", isBound && "opacity-45")}
+                >
+                  <IntegrationLogo name="kubernetes" className="size-3.5" />
+                  <span className="flex-1">{s}</span>
+                  <span className="text-[11px] text-subtle">{isBound ? "connected" : on ? "↵" : ""}</span>
+                </button>
+              )
+            })}
+            {!list.length && <p className="px-2.5 py-3 text-[12.5px] text-subtle">No service matches “{q}”</p>}
+            <p className="border-t border-line-2 px-2.5 pt-2 pb-1 text-[11.5px] text-subtle">Creates a database user for the service and stores its password in Vault. Reviewed like any change.</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }

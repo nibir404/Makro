@@ -371,6 +371,7 @@ export function ClassicNetworkAccess() {
           <p className="mt-0.5 text-[13px] text-muted-foreground">Private hosts you and your services can reach through NetBird</p>
         </div>
         <div className="flex gap-2">
+          <ViewSwitch view="list" module="network" hrefs={{ canvas: href("/network/map"), list: href("/network") }} className="h-9" />
           <Btn variant="secondary" href={href("/network/map")}>
             <Waypoints /> Access map
           </Btn>

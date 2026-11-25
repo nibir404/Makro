@@ -15,18 +15,38 @@ import { Btn, Stagger, StaggerItem, StatusDot, ease } from "@/components/idp/kit
 import { FilterTabs, Frame, TableCard, Th, VaultMark } from "../network/ui"
 import { SecretsCrumbs, useProject } from "./editor"
 import { logEntry, nowHHMM, useAccessLog } from "./store"
+import { NewVaultProjectModal } from "./vault-dialogs"
 
 /* ---------------- C4c / canvas list ---------------- */
+
+/** New Vault project sheet → lands in the new project's editor, ready for its first key. */
+function NewProject({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const href = useHref()
+  const router = useRouter()
+  return (
+    <NewVaultProjectModal
+      open={open}
+      onClose={onClose}
+      onCreate={(p) => {
+        onClose()
+        toast.success(`secret/${p.ns}/${p.name} created`, { description: `${p.envs.join(" · ")} configs · inherits ${p.inherit.length ? p.inherit.join(", ") : "nothing"}` })
+        router.push(href(`/secrets/${p.name}?edit=none&new=1`))
+      }}
+    />
+  )
+}
 
 export function SecretsIndex() {
   const mode = useMode()
   const [mv, setMv] = useModuleView("secrets")
-  if (mode === "classic") return <ClassicSecrets />
-  return mv === "canvas" ? <SecretsCanvas onView={setMv} /> : <CanvasSecretsList onView={setMv} />
+  if (mv === "canvas") return <SecretsCanvas onView={setMv} />
+  if (mode === "classic") return <ClassicSecrets onView={setMv} />
+  return <CanvasSecretsList onView={setMv} />
 }
 
 function CanvasSecretsList({ onView }: { onView: (v: "list" | "canvas") => void }) {
   const href = useHref()
+  const [creating, setCreating] = React.useState(false)
   const [q, setQ] = React.useState("")
   const list = secretProjects.filter((p) => p.name.includes(q.toLowerCase()))
   return (
@@ -47,9 +67,10 @@ function CanvasSecretsList({ onView }: { onView: (v: "list" | "canvas") => void 
           <Btn variant="secondary" href={href("/secrets/order-service/tree")}>
             Inheritance
           </Btn>
-          <Btn variant="primary" href={href("/secrets/order-service")}>
-            <Plus /> New secret
+          <Btn variant="primary" onClick={() => setCreating(true)}>
+            <Plus /> New project
           </Btn>
+          <NewProject open={creating} onClose={() => setCreating(false)} />
         </div>
       </div>
       <div className="mt-5 mb-4 flex h-8.5 w-80 items-center gap-2 rounded-[9px] border border-line-3 px-3">
@@ -84,8 +105,9 @@ function CanvasSecretsList({ onView }: { onView: (v: "list" | "canvas") => void 
   )
 }
 
-function ClassicSecrets() {
+function ClassicSecrets({ onView }: { onView: (v: "list" | "canvas") => void }) {
   const href = useHref()
+  const [creating, setCreating] = React.useState(false)
   const router = useRouter()
   const [q, setQ] = React.useState("")
   const rows = classicSecrets.filter((r) => r.key.toLowerCase().includes(q.toLowerCase()))
@@ -97,15 +119,17 @@ function ClassicSecrets() {
           <p className="mt-0.5 text-[12.5px] text-muted-foreground">vault · secret/commerce/order-service/prod · 11 keys</p>
         </div>
         <div className="flex gap-2">
+          <ViewSwitch view="list" onChange={onView} module="secrets" className="h-9" />
           <Btn variant="secondary" href={href("/secrets/order-service/compare")}>
             Compare envs
           </Btn>
           <Btn variant="secondary" href={href("/secrets/order-service/upload")}>
             Upload .env
           </Btn>
-          <Btn variant="primary" href={href("/secrets/order-service?edit=none")}>
-            <Plus /> New secret
+          <Btn variant="primary" onClick={() => setCreating(true)}>
+            <Plus /> New project
           </Btn>
+          <NewProject open={creating} onClose={() => setCreating(false)} />
         </div>
       </div>
       <div className="mt-5 mb-5 flex h-8.5 w-80 items-center gap-2 rounded-[8px] border border-line-3 px-3">
