@@ -5,6 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-25
+
+Classic-mode canvases and the old-IDP admin flows, redesigned for at most 3 clicks.
+
+### Added
+- **Module canvases in Classic mode** for Postgres, Infrastructure, Projects, Secrets and Kafka, with the Canvas / List switch on every Classic list header (Network links to its access map).
+- Old-IDP parity, redesigned for at most 3 clicks:
+  - **New Vault project** (Secrets → New project → Create): one sheet with namespace, live path preview, environments and inherited parents pre-selected. A new project opens with only its inherited keys and a clear "add the first key" prompt.
+  - **Project actions** in a ⋯ menu on the project page: edit the description inline (no dialog), service tokens, and **Delete project** with impact and type-to-confirm.
+  - **Connect a service** to a database (database → Connect a service → pick a service): opens the service's Postgres-user form with the database preselected and the role named after the service.
+  - Custom configs such as `dev-perf` are covered by **branches** (create / delete already built), so there is no separate config screen.
+
+### Fixed
+- The project canvas and stack graph fit their container, so labels line up in Classic as well as Canvas; the project canvas column headings move with the graph.
+
 ## [0.4.0] - 2026-11-25
 
 The last placeholder screens: import stack, build logs, generated code, activity filters and a product tour.
@@ -96,7 +111,8 @@ First prototype of the IDP v2 redesign, built from the Paper file "IDP V.2" (pag
 - Dummy data fixtures in `src/lib/data.ts` and `src/lib/data-ext/`.
 - Documentation: README, routes index, architecture, design-implementation brief, contributing and versioning guide, known issues.
 
-[Unreleased]: https://github.com/nibir404/Makro/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/nibir404/Makro/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/nibir404/Makro/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nibir404/Makro/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nibir404/Makro/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nibir404/Makro/compare/v0.1.0...v0.2.0
